@@ -15,10 +15,15 @@ import type {
 } from './types';
 
 async function j<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  // Only declare Content-Type when there's actually a body. Fastify rejects
+  // POSTs that announce JSON but send nothing (FST_ERR_CTP_EMPTY_JSON_BODY).
+  const headers: Record<string, string> = init?.body != null
+    ? { 'Content-Type': 'application/json', ...((init?.headers as Record<string, string>) ?? {}) }
+    : { ...((init?.headers as Record<string, string>) ?? {}) };
   const r = await fetch(input, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers,
   });
   if (r.status === 401) {
     // Surface a typed signal that the App can catch.
