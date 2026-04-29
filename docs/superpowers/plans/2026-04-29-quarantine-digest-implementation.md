@@ -100,7 +100,7 @@ export default defineConfig({
     env: {
       DATA_DIR: 'test-data',
       PUBLIC_BASE_URL: 'http://localhost:8025',
-      DIGEST_SIGNING_SECRET: 'test-secret-thirty-two-bytes-min-padpadpadpad',
+      DIGEST_SIGNING_SECRET: 'test-digest-signing-secret-not-for-production-padded',
       DIGEST_TICK_INTERVAL_SEC: '60',
     },
     maxWorkers: 1,
@@ -120,11 +120,13 @@ import { db } from '../src/db.js';
 import { rmSync } from 'node:fs';
 import { config } from '../src/config.js';
 
+// Keep this list in sync with the CREATE TABLE statements in db.ts.
 beforeEach(() => {
   db.exec(`
     DELETE FROM messages_fts;
     DELETE FROM messages;
     DELETE FROM attachments;
+    DELETE FROM contacts;
     DELETE FROM whitelist_rules;
     DELETE FROM aliases;
     DELETE FROM drafts;
@@ -1850,7 +1852,7 @@ Edit `server/vitest.config.ts`, replacing the `env` block:
     env: {
       DATA_DIR: 'test-data',
       PUBLIC_BASE_URL: 'http://localhost:8025',
-      DIGEST_SIGNING_SECRET: 'test-secret-thirty-two-bytes-min-padpadpadpad',
+      DIGEST_SIGNING_SECRET: 'test-digest-signing-secret-not-for-production-padded',
       DIGEST_TICK_INTERVAL_SEC: '60',
       API_PORT: '0',
     },

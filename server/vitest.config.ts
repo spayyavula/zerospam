@@ -8,7 +8,7 @@ export default defineConfig({
     env: {
       DATA_DIR: 'test-data',
       PUBLIC_BASE_URL: 'http://localhost:8025',
-      DIGEST_SIGNING_SECRET: 'test-secret-thirty-two-bytes-min-padpadpadpad',
+      DIGEST_SIGNING_SECRET: 'test-digest-signing-secret-not-for-production-padded',
       DIGEST_TICK_INTERVAL_SEC: '60',
     },
     maxWorkers: 1,
