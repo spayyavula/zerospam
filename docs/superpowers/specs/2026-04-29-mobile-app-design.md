@@ -27,6 +27,7 @@ Push notifications are granular (per-mailbox × per-folder toggles). v1 is alway
 | Repo layout | **npm workspaces — add `mobile/` and `shared/`** | Atomic commits; types stay in sync; one repo to clone. |
 | Mobile stack | **Expo SDK 54+, TypeScript, managed workflow** | Matches user's stated "I will be using Expo Go" intent. |
 | iOS push caveat | **EAS Development Build required for iOS** | Expo Go on iOS dropped remote push in SDK 53. Android push works in Expo Go. |
+| Reverse proxy / TLS | **Caddy with auto-ACME** | Auto-HTTPS for two subdomains, ~10-line Caddyfile, no certbot/cron. Decided 2026-04-29 over nginx. |
 
 ## 1. Architecture & topology
 
@@ -39,7 +40,7 @@ Push notifications are granular (per-mailbox × per-folder toggles). v1 is alway
         ┌───────────────────────────────────┐
         │  zero-spam.email (single VPS)     │
         │  ─────────────────────────────    │
-        │  Caddy / nginx (TLS, ACME)        │
+        │  Caddy (TLS, auto-ACME)           │
         │   ├─ api.zero-spam.email  ─►  Fastify :8025  (webmail UI + JSON API)
         │   └─ mail.zero-spam.email ─►  smtp-server :25 / :587   (existing SMTP)
         │                                                                 │
@@ -69,7 +70,7 @@ Push notifications are granular (per-mailbox × per-folder toggles). v1 is alway
 
 ### Hardening that comes with going public
 
-- **TLS everywhere.** Caddy or nginx + ACME. HSTS preload. No plain HTTP.
+- **TLS everywhere.** Caddy reverse-proxy with auto-ACME (Let's Encrypt). HSTS preload. No plain HTTP. Caddyfile fronts both `api.zero-spam.email` and `zero-spam.email`; Caddy issues and renews certs automatically — no certbot, no cron job.
 - **Rate limiting** on `/api/auth/*` and `/api/mobile/pair` (Fastify rate-limit plugin; per-IP, fail-closed).
 - **Brute-force protection** on login (lockout after N failures per account or per IP, exponential backoff).
 - **CORS** locked to `https://zero-spam.email` and `https://api.zero-spam.email`. Mobile uses bearer tokens, no CORS preflight matters there.
@@ -600,7 +601,7 @@ Each phase ships independently and the previous phase remains usable.
 - **Rate-limit tuning.** Initial values are guesses; we'll tune after some real traffic.
 - **`zod` version coupling.** Both server and mobile import the same `zod` schemas — pin a single version in `shared/` and require consumers to use it.
 - **NativeWind + Expo SDK 54.** NativeWind v4 has good SDK 54 support but the metro alias dance can be finicky on workspace setups; budget half a day for first-build issues.
-- **Caddy vs nginx on the VPS.** Caddy is simpler (auto-ACME) but nginx is more familiar to ops. Either works; pick one before Phase F.
+- **Caddy operational footprint.** Caddy is locked in (decision recorded 2026-04-29). Worth noting: smaller community than nginx and JSON-by-default logs — set `format console` in the Caddyfile if you want grep-friendly output during early ops.
 
 ## 13. Success criteria
 
