@@ -1,5 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
+import rateLimit from '@fastify/rate-limit';
 import { createReadStream, statSync } from 'node:fs';
 import { z } from 'zod';
 import { db, runInTx } from './db.js';
@@ -10,10 +12,30 @@ import { config } from './config.js';
 import { ingest } from './ingest.js';
 import { sendMessage } from './sender.js';
 import { ensureDkim, dnsRecord } from './dkim.js';
+import { authRoutes } from './routes/auth.js';
+import { requireAuth } from './requireAuth.js';
 
-export async function startApi() {
+export async function startApi(opts: { inject?: boolean } = {}) {
   const app = Fastify({ logger: { level: config.logLevel } });
-  await app.register(cors, { origin: true });
+  await app.register(cookie);
+  await app.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);   // same-origin / non-browser
+      if (config.allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error('CORS-not-allowed'), false);
+    },
+    credentials: true,
+  });
+  await app.register(rateLimit, { global: false });
+
+  // Public routes (no auth) — health check + login/logout
+  const PUBLIC_PREFIXES = ['/api/health', '/api/auth/login', '/api/auth/logout'];
+  app.addHook('preHandler', async (req, reply) => {
+    if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
+    await requireAuth(req as any, reply as any);
+  });
+
+  await app.register(authRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
 
@@ -937,6 +959,10 @@ export async function startApi() {
     return r ?? { error: 'no such mailbox' };
   });
 
+  if (opts.inject) {
+    await app.ready();
+    return app;
+  }
   await app.listen({ port: config.apiPort, host: '0.0.0.0' });
   // eslint-disable-next-line no-console
   console.log(`[api] listening on :${config.apiPort}`);
