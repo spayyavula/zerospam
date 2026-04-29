@@ -2,6 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import type { ComposeInitial, Mailbox } from '../types';
 import { Send, X, ShieldCheck, Save, Trash2 } from 'lucide-react';
+import RichTextEditor from './RichTextEditor';
+
+// Convert a plaintext seed (e.g. a reply quote) into a minimal HTML doc the
+// editor can render: escape <, >, &, then wrap each non-empty paragraph in <p>.
+function plaintextToHtml(text: string | undefined): string {
+  if (!text) return '';
+  const esc = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return esc
+    .split(/\n{2,}/)
+    .map((para) => `<p>${para.replace(/\n/g, '<br />')}</p>`)
+    .join('');
+}
 
 type Props = {
   mailboxes: Mailbox[];
@@ -37,7 +52,8 @@ export default function ComposePanel({
   const [to, setTo] = useState(joinAddrs(initial?.to));
   const [cc, setCc] = useState(joinAddrs(initial?.cc));
   const [subject, setSubject] = useState(initial?.subject ?? '');
-  const [body, setBody] = useState(initial?.text ?? '');
+  const [bodyHtml, setBodyHtml] = useState(() => plaintextToHtml(initial?.text));
+  const [bodyText, setBodyText] = useState(initial?.text ?? '');
   const [showCc, setShowCc] = useState(!!initial?.cc?.length);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +78,12 @@ export default function ComposePanel({
             to: parseAddrs(to),
             cc: showCc ? parseAddrs(cc) : [],
             subject,
-            text: body,
+            text: bodyText,
+            html: bodyHtml || undefined,
           });
         } else {
           // Don't create an empty draft — wait until the user has typed something meaningful.
-          if (!to.trim() && !subject.trim() && !body.trim()) {
+          if (!to.trim() && !subject.trim() && !bodyText.trim()) {
             setDraftStatus('idle');
             return;
           }
@@ -75,7 +92,8 @@ export default function ComposePanel({
             to: parseAddrs(to),
             cc: showCc ? parseAddrs(cc) : undefined,
             subject,
-            text: body,
+            text: bodyText,
+            html: bodyHtml || undefined,
             inReplyTo,
             references,
             replyToMessageId,
@@ -90,7 +108,7 @@ export default function ComposePanel({
     }, 1500);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [to, cc, subject, body, showCc, mailboxId]);
+  }, [to, cc, subject, bodyHtml, bodyText, showCc, mailboxId]);
 
   const markDirty = (fn: (v: string) => void) => (v: string) => {
     dirty.current = true;
@@ -116,7 +134,8 @@ export default function ComposePanel({
           to: toAddrs,
           cc: showCc ? parseAddrs(cc) : [],
           subject,
-          text: body,
+          text: bodyText,
+          html: bodyHtml || undefined,
         });
         r = await api.sendDraft(draftId);
       } else {
@@ -125,7 +144,8 @@ export default function ComposePanel({
           to: toAddrs,
           cc: showCc ? parseAddrs(cc) : undefined,
           subject: subject || '(no subject)',
-          text: body,
+          text: bodyText,
+          html: bodyHtml || undefined,
           inReplyTo,
           references,
         });
@@ -230,12 +250,15 @@ export default function ComposePanel({
               onChange={(e) => markDirty(setSubject)(e.target.value)}
             />
           </Row>
-          <textarea
-            rows={14}
-            className="w-full bg-zsbg border border-zsborder rounded px-3 py-2 text-sm font-sans"
+          <RichTextEditor
+            valueHtml={bodyHtml}
             placeholder="Write your message…"
-            value={body}
-            onChange={(e) => markDirty(setBody)(e.target.value)}
+            onChange={(html, text) => {
+              dirty.current = true;
+              setDraftStatus('idle');
+              setBodyHtml(html);
+              setBodyText(text);
+            }}
           />
         </div>
 
