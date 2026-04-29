@@ -15,6 +15,11 @@ beforeEach(() => {
     DELETE FROM drafts;
     DELETE FROM mailboxes;
     DELETE FROM domains;
+    DELETE FROM audit_log;
+    DELETE FROM pairing_codes;
+    DELETE FROM devices;
+    DELETE FROM sessions;
+    DELETE FROM users;
   `);
 });
 

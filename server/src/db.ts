@@ -130,6 +130,60 @@ CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
 CREATE TRIGGER IF NOT EXISTS messages_fts_ad AFTER DELETE ON messages BEGIN
   DELETE FROM messages_fts WHERE message_id = old.id;
 END;
+
+CREATE TABLE IF NOT EXISTS users (
+  id              INTEGER PRIMARY KEY,
+  email           TEXT NOT NULL UNIQUE,
+  password_hash   TEXT NOT NULL,
+  totp_secret     TEXT,
+  totp_enabled_at INTEGER,
+  created_at      INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id          TEXT PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL,
+  ip          TEXT,
+  user_agent  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_exp  ON sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS pairing_codes (
+  code_hash   TEXT PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL,
+  consumed_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS devices (
+  id                INTEGER PRIMARY KEY,
+  user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name              TEXT NOT NULL,
+  token_hash        TEXT NOT NULL UNIQUE,
+  expo_push_token   TEXT,
+  platform          TEXT,
+  app_version       TEXT,
+  created_at        INTEGER NOT NULL,
+  last_seen_at      INTEGER NOT NULL,
+  revoked_at        INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  event      TEXT NOT NULL,
+  detail     TEXT,
+  ip         TEXT,
+  user_agent TEXT,
+  at         INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_event ON audit_log(event, at DESC);
 `;
 
 db.exec(SCHEMA);
@@ -312,4 +366,45 @@ export type AttachmentRow = {
   cid: string | null;
   inline: number;
   path: string;
+};
+
+export type User = {
+  id: number;
+  email: string;
+  password_hash: string;
+  totp_secret: string | null;
+  totp_enabled_at: number | null;
+  created_at: number;
+};
+
+export type Session = {
+  id: string;
+  user_id: number;
+  created_at: number;
+  expires_at: number;
+  ip: string | null;
+  user_agent: string | null;
+};
+
+export type Device = {
+  id: number;
+  user_id: number;
+  name: string;
+  token_hash: string;
+  expo_push_token: string | null;
+  platform: string | null;
+  app_version: string | null;
+  created_at: number;
+  last_seen_at: number;
+  revoked_at: number | null;
+};
+
+export type AuditLogEntry = {
+  id: number;
+  user_id: number | null;
+  event: string;
+  detail: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  at: number;
 };
