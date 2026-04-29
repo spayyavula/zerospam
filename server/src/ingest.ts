@@ -8,7 +8,7 @@ import { db } from './db.js';
 import type { Mailbox } from './db.js';
 import { saveRaw, saveAttachment } from './storage.js';
 import { matchWhitelist } from './whitelist.js';
-import { checkAuth } from './auth.js';
+import { checkAuth } from './mailauth.js';
 import { bus } from './events.js';
 import { scanTrackers } from './utils/trackers.js';
 
