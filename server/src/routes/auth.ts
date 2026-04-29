@@ -5,6 +5,7 @@ import { verifyTotp } from '../totp.js';
 import { createSession, destroySession, SESSION_COOKIE_NAME } from '../sessions.js';
 import { config } from '../config.js';
 import { recordAudit } from '../audit.js';
+import { db } from '../db.js';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -56,6 +57,22 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       maxAge: 30 * 24 * 60 * 60,
     });
     recordAudit({ event: 'login.ok', userId: user.id, ip, userAgent: ua });
+    return { ok: true };
+  });
+
+  app.post('/api/auth/logout', async (req, reply) => {
+    const cookies = (req as any).cookies as Record<string, string> | undefined;
+    const raw = cookies?.[SESSION_COOKIE_NAME];
+    if (raw) {
+      const dot = raw.indexOf('.');
+      const sessionId = dot >= 0 ? raw.slice(0, dot) : raw;
+      // Read the user id BEFORE destroying so we can audit who logged out.
+      const row = db.prepare('SELECT user_id FROM sessions WHERE id = ?').get(sessionId) as { user_id: number } | undefined;
+      const userId = row?.user_id ?? null;
+      destroySession(sessionId);
+      recordAudit({ event: 'logout', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+    }
+    reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
     return { ok: true };
   });
 }
