@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
 import { Shield } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState('');
@@ -32,6 +33,7 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zsbg px-6">
+      <ThemeToggle variant="floating" />
       <div className="w-full max-w-[380px]">
         <div className="flex flex-col items-center text-center mb-10 select-none">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-zsaccent/30 to-zsaccent/10 ring-1 ring-zsaccent/30 flex items-center justify-center mb-5 shadow-[0_8px_24px_-8px_rgba(92,200,255,0.5)]">

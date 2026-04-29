@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme tokens.
+ * Defaults below are dark; the [data-theme="light"] block below overrides them.
+ * Values are RGB triplets (no rgb() wrapper) so Tailwind's
+ * `rgb(var(--zsbg) / <alpha-value>)` form can apply opacity modifiers.
+ */
+:root {
+  --zsbg: 11 14 20;          /* #0b0e14 */
+  --zspanel: 17 21 28;       /* #11151c */
+  --zsborder: 31 39 51;      /* #1f2733 */
+  --zsmuted: 124 138 160;    /* #7c8aa0 */
+  --zstext: 219 227 239;     /* #dbe3ef */
+  --zsaccent: 92 200 255;    /* #5cc8ff */
+  --zsdanger: 255 107 129;   /* #ff6b81 */
+  --zsok: 127 224 161;       /* #7fe0a1 */
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --zsbg: 244 244 247;       /* #f4f4f7 */
+  --zspanel: 255 255 255;    /* #ffffff */
+  --zsborder: 226 226 232;   /* #e2e2e8 */
+  --zsmuted: 107 114 128;    /* #6b7280 */
+  --zstext: 28 28 34;        /* #1c1c22 */
+  --zsaccent: 10 132 255;    /* #0a84ff (Apple system blue) */
+  --zsdanger: 220 38 38;     /* #dc2626 */
+  --zsok: 22 163 74;         /* #16a34a */
+  color-scheme: light;
+}
+
 html, body, #root { height: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
@@ -15,16 +45,19 @@ body {
 }
 input, button, textarea, select { font: inherit; letter-spacing: inherit; }
 
+/* Themed scrollbars — track stays neutral, thumb adapts to the theme. */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: #1f2733;
+  background: rgb(var(--zsborder));
   border-radius: 6px;
 }
-::-webkit-scrollbar-thumb:hover { background: #2a3340; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--zsmuted) / 0.6); }
 
 .glow {
-  box-shadow: 0 0 0 1px rgba(92, 200, 255, 0.25), 0 0 20px rgba(92, 200, 255, 0.15);
+  box-shadow:
+    0 0 0 1px rgb(var(--zsaccent) / 0.25),
+    0 0 20px rgb(var(--zsaccent) / 0.15);
 }
 
 .message-html-shadow {

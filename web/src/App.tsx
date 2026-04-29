@@ -24,6 +24,7 @@ import AliasManager from './components/AliasManager';
 import ProbationaryWall from './components/ProbationaryWall';
 import LoginForm from './components/LoginForm';
 import TotpSetupModal from './components/TotpSetupModal';
+import ThemeToggle from './components/ThemeToggle';
 import { useShortcuts } from './hooks/useShortcuts';
 import { Shield, Settings, HelpCircle } from 'lucide-react';
 
@@ -346,6 +347,7 @@ export default function App() {
         >
           2FA
         </button>
+        <ThemeToggle />
         <button
           onClick={() => setShowHelp(true)}
           className="p-1.5 rounded hover:bg-zsborder/40 text-zsmuted"
