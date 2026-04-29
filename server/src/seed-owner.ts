@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { createOwner, getOwnerByEmail } from './users.js';
 
 export type SeedOwnerOpts = { argv: string[] };
@@ -73,8 +74,10 @@ export async function runSeedOwner(opts: SeedOwnerOpts): Promise<void> {
   console.log(`✓ owner created: ${email} (id=${id})`);
 }
 
-// Direct invocation
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Direct invocation. The string-equality form (`file://${process.argv[1]}`)
+// breaks on Windows because of backslash separators and URL-encoded spaces;
+// pathToFileURL produces the same canonical href format as import.meta.url.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runSeedOwner({ argv: process.argv.slice(2) }).catch((e) => {
     // eslint-disable-next-line no-console
     console.error(e?.message ?? e);
