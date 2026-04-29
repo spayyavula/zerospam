@@ -59,6 +59,7 @@ Click **Compose** in the sidebar to send a DKIM-signed message back to yourself 
 ```
 server/  Node.js SMTP + Fastify API + SQLite (node:sqlite) + sweeper + DKIM + nodemailer
 web/     Vite + React + Tailwind webmail UI
+docs/    Design specs and implementation plans (see "Documentation" below)
 shared/  (reserved)
 ```
 
@@ -129,6 +130,17 @@ Verify each: `dig MX yourdomain.com`, `dig TXT zs1._domainkey.yourdomain.com`, e
 - ✅ **Phase 1**: SMTP receive, whitelist, quarantine + TTL, REST API, three-pane UI, SSE updates, test injector
 - ✅ **Phase 1+**: FTS5 search, attachments, sandboxed HTML rendering with image blocking, bulk select, keyboard shortcuts, mailbox manager, sender mismatch detection
 - ✅ **Phase 2**: outbound send via nodemailer, per-domain DKIM signing + DNS panel, compose UI, trust-on-send
+- 📐 **Phase 3 (designed, plan written, not yet implemented)**: quarantine digest with one-tap sender trust — daily HMAC-signed digest emailed to the user's external inbox (or loopback into the mailbox itself), confirm-page action flow, per-mailbox settings. Will introduce `vitest` as the server test framework. See [docs/superpowers/specs/2026-04-29-quarantine-digest-design.md](docs/superpowers/specs/2026-04-29-quarantine-digest-design.md) and [docs/superpowers/plans/2026-04-29-quarantine-digest-implementation.md](docs/superpowers/plans/2026-04-29-quarantine-digest-implementation.md).
+- 🗺️ **Roadmap (deferred)**: auto-allow guardrails (replies to threads I started, OTP/2FA, calendar invites bypass quarantine) and trust-graph import on signup (seed whitelist from an existing Gmail/Outlook account). Both held until Phase 3 ships.
+
+## Documentation
+
+Design specs and implementation plans live under [`docs/superpowers/`](docs/superpowers/):
+
+- [`specs/`](docs/superpowers/specs/) — feature design specs (architecture, data model, edge cases, testing strategy, extensibility decisions)
+- [`plans/`](docs/superpowers/plans/) — TDD-flavored implementation plans (file-by-file, task-by-task, with full code snippets)
+
+The intent is that every non-trivial feature gets a spec → plan → build cycle, not directly-to-code.
 
 ## Known caveats
 
