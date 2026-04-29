@@ -1,0 +1,332 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1777416675660,
+  "projectRoot": "C:\\Users\\sreek\\myprojects\\ZeroSpam Email",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": ">=20",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "npm",
+    "runtime": "Node.js 20"
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": "git add server/test/setup.ts server/vitest.config.ts docs/superpowers/plans/2026-04-29-quarantine-digest-implementation.md && git commit -m \"$(cat <<'EOF'\nchore(test): address Task 0 code-review findings\n\n- setup.ts: add DELETE FROM contacts to the beforeEach truncate list.\n  ingest.ts upserts contacts (line 81 of ingest.ts) and the table has\n  a UNIQUE(mailbox_id, address) constraint, so leaks between tests\n  would silently corrupt assertions on contact state once Task 4+\n  tests start exercising real ingestion.\n- setup.ts: add a \"keep in sync with db.ts\" comment so future schema\n  additions don't get missed.\n- vitest.config.ts: replace the misleading DIGEST_SIGNING_SECRET\n  literal (it claimed \"thirty-two-bytes-min\" but was 45 bytes) with\n  a clearly-labeled test-only string.\n- Plan file synced with both fixes so it doesn't drift.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>\nEOF\n)\" && git log --oneline -4",
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+      "dev:server": "npm run dev --workspace=server",
+      "dev:web": "npm run dev --workspace=web",
+      "build": "npm run build --workspace=web && npm run build --workspace=server",
+      "start": "npm run start --workspace=server",
+      "seed": "npm run seed --workspace=server",
+      "inject": "npm run inject --workspace=server"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": true,
+    "workspaces": [
+      "server",
+      "web"
+    ],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "server": {
+      "path": "server",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1777416675629,
+      "keyFiles": [
+        "package.json",
+        "tsconfig.json"
+      ]
+    },
+    "web": {
+      "path": "web",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1777416675630,
+      "keyFiles": [
+        "index.html",
+        "package.json",
+        "postcss.config.js",
+        "tailwind.config.js",
+        "tsconfig.json"
+      ]
+    },
+    "server\\data": {
+      "path": "server\\data",
+      "purpose": "Data files",
+      "fileCount": 3,
+      "lastAccessed": 1777416675638,
+      "keyFiles": [
+        "zerospam.sqlite",
+        "zerospam.sqlite-shm",
+        "zerospam.sqlite-wal"
+      ]
+    },
+    "server\\src": {
+      "path": "server\\src",
+      "purpose": "Source code",
+      "fileCount": 13,
+      "lastAccessed": 1777416675639,
+      "keyFiles": [
+        "api.ts",
+        "auth.ts",
+        "config.ts"
+      ]
+    },
+    "web\\dist": {
+      "path": "web\\dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1777416675639,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "web\\node_modules": {
+      "path": "web\\node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 0,
+      "lastAccessed": 1777416675640,
+      "keyFiles": []
+    },
+    "web\\src": {
+      "path": "web\\src",
+      "purpose": "Source code",
+      "fileCount": 5,
+      "lastAccessed": 1777416675640,
+      "keyFiles": [
+        "api.ts",
+        "App.tsx",
+        "main.tsx"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "server\\src\\ingest.ts",
+      "accessCount": 12,
+      "lastAccessed": 1777443125532,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\db.ts",
+      "accessCount": 11,
+      "lastAccessed": 1777443109198,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\api.ts",
+      "accessCount": 8,
+      "lastAccessed": 1777438799401,
+      "type": "file"
+    },
+    {
+      "path": "docs\\superpowers\\specs\\2026-04-29-quarantine-digest-design.md",
+      "accessCount": 7,
+      "lastAccessed": 1777441001720,
+      "type": "file"
+    },
+    {
+      "path": "server\\package.json",
+      "accessCount": 6,
+      "lastAccessed": 1777443097839,
+      "type": "file"
+    },
+    {
+      "path": "server\\vitest.config.ts",
+      "accessCount": 6,
+      "lastAccessed": 1777443239859,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\sender.ts",
+      "accessCount": 5,
+      "lastAccessed": 1777438800492,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 5,
+      "lastAccessed": 1777442036091,
+      "type": "file"
+    },
+    {
+      "path": "server\\test\\setup.ts",
+      "accessCount": 5,
+      "lastAccessed": 1777443234034,
+      "type": "file"
+    },
+    {
+      "path": "docs\\superpowers\\plans\\2026-04-29-quarantine-digest-implementation.md",
+      "accessCount": 5,
+      "lastAccessed": 1777443258620,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\config.ts",
+      "accessCount": 4,
+      "lastAccessed": 1777443097040,
+      "type": "file"
+    },
+    {
+      "path": "server\\test\\helpers.ts",
+      "accessCount": 4,
+      "lastAccessed": 1777443102450,
+      "type": "file"
+    },
+    {
+      "path": "server\\test\\sanity.test.ts",
+      "accessCount": 3,
+      "lastAccessed": 1777443103423,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\utils\\trackers.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777437232401,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 2,
+      "lastAccessed": 1777438540059,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\sweeper.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777438800182,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\smtp.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777438800904,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\components\\MailboxManager.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777441373951,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\api.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777441374769,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\storage.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777441375510,
+      "type": "file"
+    },
+    {
+      "path": "server\\tsconfig.json",
+      "accessCount": 2,
+      "lastAccessed": 1777443097493,
+      "type": "file"
+    },
+    {
+      "path": "server\\src",
+      "accessCount": 2,
+      "lastAccessed": 1777443119590,
+      "type": "directory"
+    },
+    {
+      "path": "web\\src\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777431838570,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\utils\\sender.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777431869872,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\hooks\\useShortcuts.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777431883447,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\components\\MessageList.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777431923646,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\components\\ReadingPane.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777431972809,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\components\\HelpModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777432009484,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777432051855,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\whitelist.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777438799436,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\auth.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777438801799,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777438802285,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\events.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777441375091,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\dkim.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777443109892,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

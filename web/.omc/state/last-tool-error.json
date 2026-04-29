@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"sleep 4 && cat \\\"C:/Users/sreek/AppData/Local/Temp/claude/c--Users-sreek-myprojects-ZeroSpam-Email/c0c28e1e-0886-4f4d-b94d-fad2698fc6e8/tasks/b3lm0a6we.output\\\" 2>/dev/null | tail -10 && e...",
+  "error": "Exit code 143",
+  "timestamp": "2026-04-28T22:43:06.833Z",
+  "retry_count": 1
+}
