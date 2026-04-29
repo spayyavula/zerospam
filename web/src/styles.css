@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #1f2733;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: #2a3340; }
+
+.glow {
+  box-shadow: 0 0 0 1px rgba(92, 200, 255, 0.25), 0 0 20px rgba(92, 200, 255, 0.15);
+}
+
+.message-html-shadow {
+  /* placeholder: rendering raw html in a sandboxed iframe is phase 2 */
+}
+
+.fade-in { animation: fadeIn 160ms ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }

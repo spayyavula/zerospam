@@ -1,0 +1,26 @@
+{
+  "name": "zerospam-email",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Whitelist-first SMTP server + webmail. Default-deny inbox; everything else expires from quarantine.",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:web": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web && npm run build --workspace=server",
+    "start": "npm run start --workspace=server",
+    "seed": "tsx server/src/seed.ts",
+    "inject": "tsx server/src/inject.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
