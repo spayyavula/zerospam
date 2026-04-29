@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
+import { authenticator } from 'otplib';
 import { authRoutes } from '../src/routes/auth.js';
 import { seedOwner } from './fixtures/owner.js';
 import { db } from '../src/db.js';
@@ -63,5 +64,48 @@ describe('POST /api/auth/login', () => {
     expect(r.json()).toEqual({ error: 'invalid-credentials' });
     const audit = db.prepare("SELECT * FROM audit_log WHERE event = 'login.fail'").get() as any;
     expect(JSON.parse(audit.detail).reason).toBe('unknown-email');
+  });
+});
+
+describe('login + TOTP', () => {
+  it('returns needs_totp:true when TOTP is enabled and the code is missing', async () => {
+    const { email, password } = await seedOwner({ totp: true });
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { 'content-type': 'application/json' },
+      payload: { email, password },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toEqual({ needs_totp: true });
+    expect(r.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('accepts the correct TOTP code and issues a cookie', async () => {
+    const { email, password, totpSecret } = await seedOwner({ totp: true });
+    const code = authenticator.generate(totpSecret!);
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { 'content-type': 'application/json' },
+      payload: { email, password, totp: code },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toEqual({ ok: true });
+    expect(r.headers['set-cookie']).toBeTruthy();
+  });
+
+  it('rejects a wrong TOTP code', async () => {
+    const { email, password } = await seedOwner({ totp: true });
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { 'content-type': 'application/json' },
+      payload: { email, password, totp: '000000' },
+    });
+    expect(r.statusCode).toBe(401);
   });
 });
