@@ -103,14 +103,14 @@ export default defineConfig({
       DIGEST_SIGNING_SECRET: 'test-secret-thirty-two-bytes-min-padpadpadpad',
       DIGEST_TICK_INTERVAL_SEC: '60',
     },
-    pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
+    maxWorkers: 1,
+    isolate: false,
     sequence: { concurrent: false },
   },
 });
 ```
 
-(`singleFork` + `concurrent: false` keep tests serialised so the shared SQLite singleton is safe.)
+(`maxWorkers: 1` + `isolate: false` + `concurrent: false` keep tests serialised against the shared SQLite singleton. This is the vitest-4 form of the v3 `pool: 'forks', singleFork: true` shorthand.)
 
 - [ ] **Step 0.4: Create `server/test/setup.ts`**
 

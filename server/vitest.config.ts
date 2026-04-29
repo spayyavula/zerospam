@@ -11,8 +11,8 @@ export default defineConfig({
       DIGEST_SIGNING_SECRET: 'test-secret-thirty-two-bytes-min-padpadpadpad',
       DIGEST_TICK_INTERVAL_SEC: '60',
     },
-    pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
+    maxWorkers: 1,
+    isolate: false,
     sequence: { concurrent: false },
   },
 });
