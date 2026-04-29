@@ -7,8 +7,11 @@ import { config } from '../config.js';
 import { recordAudit } from '../audit.js';
 import { db } from '../db.js';
 
+// The owner "email" is a credential identifier, not a delivery address — accept
+// any non-empty string containing '@' (e.g. me@local for dev) instead of zod's
+// strict RFC-5322 email validator. Seed-owner uses the same loose policy.
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(3).regex(/.+@.+/),
   password: z.string().min(1),
   totp: z.string().regex(/^\d{6}$/).optional(),
 });
