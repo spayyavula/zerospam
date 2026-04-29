@@ -22,6 +22,7 @@ import DkimPanel from './components/DkimPanel';
 import HelpModal from './components/HelpModal';
 import AliasManager from './components/AliasManager';
 import ProbationaryWall from './components/ProbationaryWall';
+import LoginForm from './components/LoginForm';
 import { useShortcuts } from './hooks/useShortcuts';
 import { Shield, Settings, HelpCircle } from 'lucide-react';
 
@@ -78,6 +79,14 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ListFilter>('all');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [authed, setAuthed] = useState<boolean | null>(null); // null = checking
+
+  // auth check — runs first so we know whether to show the login gate
+  useEffect(() => {
+    api.authMe()
+      .then(() => setAuthed(true))
+      .catch(() => setAuthed(false));
+  }, []);
 
   // initial mailbox load
   useEffect(() => {
@@ -297,6 +306,9 @@ export default function App() {
       else if (rightPanel !== 'reading') setRightPanel('reading');
     },
   });
+
+  if (authed === null) return null;
+  if (!authed) return <LoginForm onSuccess={() => setAuthed(true)} />;
 
   return (
     <div className="h-full flex flex-col">
