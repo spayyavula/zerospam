@@ -20,6 +20,22 @@ const defaultDataDir = resolve(SERVER_ROOT, 'data');
 //   'relay'                       — uses an SMTP relay (RELAY_HOST/PORT/USER/PASS) for real delivery.
 const sendMode = (process.env.SEND_MODE ?? 'loopback') as 'loopback' | 'relay';
 
+export function parseSessionSecret(input: { value: string | undefined; isTest: boolean }): string {
+  if (!input.value) {
+    if (input.isTest) return 'a'.repeat(64);
+    throw new Error('Missing required env var: SESSION_SECRET');
+  }
+  if (input.value.length < 32) {
+    throw new Error('SESSION_SECRET must be at least 32 chars');
+  }
+  return input.value;
+}
+
+export function parseAllowedOrigins(raw: string | undefined): string[] {
+  if (!raw) return ['http://localhost:5173'];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export const config = {
   smtpPort: envInt('SMTP_PORT', 2525),
   apiPort: envInt('API_PORT', 8025),
@@ -38,6 +54,14 @@ export const config = {
   dkim: {
     selector: process.env.DKIM_SELECTOR ?? 'zs1',
   },
+  sessionSecret: parseSessionSecret({
+    value: process.env.SESSION_SECRET,
+    isTest: process.env.NODE_ENV === 'test',
+  }),
+  allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
+  rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
+  rateLimitAuthPerMin: envInt('RATE_LIMIT_AUTH_PER_MIN', 30),
+  isProd: process.env.NODE_ENV === 'production',
 } as const;
 
 export type Config = typeof config;
