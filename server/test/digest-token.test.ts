@@ -16,8 +16,12 @@ function payload(over: Partial<DigestTokenPayload> = {}): DigestTokenPayload {
 
 describe('digest-token', () => {
   it('round-trips a valid payload', () => {
-    const t = sign(payload(), SECRET);
-    expect(verify(t, SECRET, Date.now())).toEqual(payload());
+    // Pin `exp` so the assertion compares the same payload that was signed.
+    // Calling payload() twice with default exp = Date.now() + N would race.
+    const exp = Date.now() + 86_400_000;
+    const p = payload({ exp });
+    const t = sign(p, SECRET);
+    expect(verify(t, SECRET, Date.now())).toEqual(p);
   });
 
   it('returns null for a tampered signature', () => {
