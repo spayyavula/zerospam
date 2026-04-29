@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { getOwnerByEmail, getOwnerById, verifyPassword, updateOwnerPassword } from '../users.js';
-import { verifyTotp } from '../totp.js';
+import { getOwnerByEmail, getOwnerById, verifyPassword, updateOwnerPassword, setTotpSecret } from '../users.js';
+import { verifyTotp, generateTotpSecret, provisioningUri } from '../totp.js';
 import { createSession, destroySession, SESSION_COOKIE_NAME } from '../sessions.js';
 import { config } from '../config.js';
 import { recordAudit } from '../audit.js';
@@ -42,7 +42,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return;
     }
 
-    if (user.totp_secret) {
+    if (user.totp_enabled_at) {
       if (!totp) {
         return { needs_totp: true };
       }
@@ -86,7 +86,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const u = getOwnerById(userId);
     if (!u) { reply.code(401).send({ error: 'unauthorized' }); return; }
-    return { user: { id: u.id, email: u.email, totp_enabled: !!u.totp_secret } };
+    return { user: { id: u.id, email: u.email, totp_enabled: !!u.totp_enabled_at } };
   });
 
   app.post('/api/auth/password', async (req, reply) => {
@@ -100,6 +100,51 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!ok) { reply.code(401).send({ error: 'invalid-credentials' }); return; }
     await updateOwnerPassword(userId, parsed.data.newPassword);
     recordAudit({ event: 'password.changed', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+    return { ok: true };
+  });
+
+  app.post('/api/auth/totp/setup', async (req, reply) => {
+    const userId = (req as any).user?.id;
+    if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    const u = getOwnerById(userId);
+    if (!u) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    const secret = generateTotpSecret();
+    // Store as candidate — totp_enabled_at stays null until /confirm
+    db.prepare('UPDATE users SET totp_secret = ?, totp_enabled_at = NULL WHERE id = ?').run(secret, userId);
+    return { secret, otpauth_url: provisioningUri(u.email, secret) };
+  });
+
+  const totpConfirmSchema = z.object({ code: z.string().regex(/^\d{6}$/) });
+  app.post('/api/auth/totp/confirm', async (req, reply) => {
+    const userId = (req as any).user?.id;
+    if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    const parsed = totpConfirmSchema.safeParse(req.body);
+    if (!parsed.success) { reply.code(400).send({ error: 'invalid-body' }); return; }
+    const u = getOwnerById(userId);
+    if (!u || !u.totp_secret) { reply.code(400).send({ error: 'no-pending-totp' }); return; }
+    if (!verifyTotp(u.totp_secret, parsed.data.code)) {
+      recordAudit({ event: 'totp.fail', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+      reply.code(401).send({ error: 'invalid-code' });
+      return;
+    }
+    db.prepare('UPDATE users SET totp_enabled_at = ? WHERE id = ?').run(Date.now(), userId);
+    recordAudit({ event: 'totp.enabled', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+    return { ok: true };
+  });
+
+  const totpDisableSchema = z.object({ password: z.string().min(1) });
+  app.delete('/api/auth/totp', async (req, reply) => {
+    const userId = (req as any).user?.id;
+    if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    const parsed = totpDisableSchema.safeParse(req.body);
+    if (!parsed.success) { reply.code(400).send({ error: 'invalid-body' }); return; }
+    const u = getOwnerById(userId);
+    if (!u) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    if (!(await verifyPassword(u.password_hash, parsed.data.password))) {
+      reply.code(401).send({ error: 'invalid-credentials' }); return;
+    }
+    setTotpSecret(userId, null);
+    recordAudit({ event: 'totp.disabled', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
     return { ok: true };
   });
 }
