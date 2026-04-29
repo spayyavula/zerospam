@@ -16,9 +16,14 @@ import type {
 
 async function j<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   const r = await fetch(input, {
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
+  if (r.status === 401) {
+    // Surface a typed signal that the App can catch.
+    throw Object.assign(new Error('unauthorized'), { status: 401 });
+  }
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   if (r.status === 204) return undefined as T;
   return r.json() as Promise<T>;
@@ -170,6 +175,20 @@ export const api = {
   // dev: simulate inbound
   inject: (body: { to: string; from: string; fromName?: string; subject: string; text: string }) =>
     j(`/api/inject`, { method: 'POST', body: JSON.stringify(body) }),
+
+  // auth
+  authMe: () => j<{ user: { id: number; email: string; totp_enabled: boolean } }>('/api/auth/me'),
+  authLogin: (b: { email: string; password: string; totp?: string }) =>
+    j<{ ok: true } | { needs_totp: true }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(b),
+    }),
+  authLogout: () => j<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
+  authChangePassword: (b: { currentPassword: string; newPassword: string }) =>
+    j<{ ok: true }>('/api/auth/password', { method: 'POST', body: JSON.stringify(b) }),
+  totpSetup: () => j<{ secret: string; otpauth_url: string }>('/api/auth/totp/setup', { method: 'POST' }),
+  totpConfirm: (b: { code: string }) => j<{ ok: true }>('/api/auth/totp/confirm', { method: 'POST', body: JSON.stringify(b) }),
+  totpDisable: (b: { password: string }) => j<{ ok: true }>('/api/auth/totp', { method: 'DELETE', body: JSON.stringify(b) }),
 };
 
 export function subscribeEvents(onEvent: (e: any) => void): () => void {

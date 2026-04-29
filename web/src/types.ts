@@ -127,3 +127,7 @@ export type BulkAction =
   | 'move-quarantine'
   | 'delete'
   | 'trust-sender';
+
+export type AuthMe = { user: { id: number; email: string; totp_enabled: boolean } };
+export type LoginRequest = { email: string; password: string; totp?: string };
+export type LoginResponse = { ok: true } | { needs_totp: true };
