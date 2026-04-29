@@ -54,6 +54,17 @@ npm run inject -- --to sreekanth@researchbot.co --from spam@evil.io      --subje
 
 Click **Compose** in the sidebar to send a DKIM-signed message back to yourself — it round-trips through the local SMTP server and appears in your Inbox.
 
+### Owner bootstrap
+
+The webmail requires you to sign in as a single owner. To create the owner:
+
+```bash
+npm run seed:owner                                                 # interactive
+npm run seed:owner -- --email me@local --password 'a-good-password' # non-interactive
+```
+
+Then open <http://localhost:5173> and sign in.
+
 ## Layout
 
 ```
@@ -83,6 +94,12 @@ RELAY_PORT=587
 RELAY_USER=
 RELAY_PASS=
 RELAY_SECURE=false                # true for implicit-TLS port 465
+
+# Auth
+SESSION_SECRET=<32+ random chars>      # required in production
+ALLOWED_ORIGINS=http://localhost:5173  # comma-separated, CORS allowlist
+RATE_LIMIT_LOGIN_PER_MIN=10            # default 10
+RATE_LIMIT_AUTH_PER_MIN=30             # default 30
 ```
 
 ## Deployment
@@ -131,6 +148,7 @@ Verify each: `dig MX yourdomain.com`, `dig TXT zs1._domainkey.yourdomain.com`, e
 - ✅ **Phase 1+**: FTS5 search, attachments, sandboxed HTML rendering with image blocking, bulk select, keyboard shortcuts, mailbox manager, sender mismatch detection
 - ✅ **Phase 2**: outbound send via nodemailer, per-domain DKIM signing + DNS panel, compose UI, trust-on-send
 - 📐 **Phase 3 (designed, plan written, not yet implemented)**: quarantine digest with one-tap sender trust — daily HMAC-signed digest emailed to the user's external inbox (or loopback into the mailbox itself), confirm-page action flow, per-mailbox settings. Will introduce `vitest` as the server test framework. See [docs/superpowers/specs/2026-04-29-quarantine-digest-design.md](docs/superpowers/specs/2026-04-29-quarantine-digest-design.md) and [docs/superpowers/plans/2026-04-29-quarantine-digest-implementation.md](docs/superpowers/plans/2026-04-29-quarantine-digest-implementation.md).
+- 🚧 **Phase 4 (Mobile, in progress)**: Phase A done — single-owner auth (argon2id + optional TOTP), HMAC-signed session cookies, audit log, login rate limit, webmail login gate. See [docs/superpowers/specs/2026-04-29-mobile-app-design.md](docs/superpowers/specs/2026-04-29-mobile-app-design.md) and [docs/superpowers/plans/2026-04-29-mobile-app-phase-a-auth-foundation.md](docs/superpowers/plans/2026-04-29-mobile-app-phase-a-auth-foundation.md).
 - 🗺️ **Roadmap (deferred)**: auto-allow guardrails (replies to threads I started, OTP/2FA, calendar invites bypass quarantine) and trust-graph import on signup (seed whitelist from an existing Gmail/Outlook account). Both held until Phase 3 ships.
 
 ## Documentation
