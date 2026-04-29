@@ -11,3 +11,4 @@ web/dist/
 .vite/
 server/test-data/
 server/data/.digest-secret
+.superpowers/
