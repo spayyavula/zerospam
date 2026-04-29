@@ -19,7 +19,11 @@ const passwordSchema = z.object({
 });
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/api/auth/login', async (req, reply) => {
+  app.post('/api/auth/login', {
+    config: {
+      rateLimit: { max: config.rateLimitLoginPerMin, timeWindow: '1 minute' },
+    },
+  }, async (req, reply) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
       reply.code(400).send({ error: 'invalid-body' });
@@ -89,7 +93,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { user: { id: u.id, email: u.email, totp_enabled: !!u.totp_enabled_at } };
   });
 
-  app.post('/api/auth/password', async (req, reply) => {
+  app.post('/api/auth/password', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const userId = (req as any).user?.id;
     if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const parsed = passwordSchema.safeParse(req.body);
@@ -103,7 +109,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post('/api/auth/totp/setup', async (req, reply) => {
+  app.post('/api/auth/totp/setup', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const userId = (req as any).user?.id;
     if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const u = getOwnerById(userId);
@@ -115,7 +123,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   const totpConfirmSchema = z.object({ code: z.string().regex(/^\d{6}$/) });
-  app.post('/api/auth/totp/confirm', async (req, reply) => {
+  app.post('/api/auth/totp/confirm', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const userId = (req as any).user?.id;
     if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const parsed = totpConfirmSchema.safeParse(req.body);
@@ -133,7 +143,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   const totpDisableSchema = z.object({ password: z.string().min(1) });
-  app.delete('/api/auth/totp', async (req, reply) => {
+  app.delete('/api/auth/totp', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const userId = (req as any).user?.id;
     if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const parsed = totpDisableSchema.safeParse(req.body);
