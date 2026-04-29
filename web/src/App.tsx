@@ -23,6 +23,7 @@ import HelpModal from './components/HelpModal';
 import AliasManager from './components/AliasManager';
 import ProbationaryWall from './components/ProbationaryWall';
 import LoginForm from './components/LoginForm';
+import TotpSetupModal from './components/TotpSetupModal';
 import { useShortcuts } from './hooks/useShortcuts';
 import { Shield, Settings, HelpCircle } from 'lucide-react';
 
@@ -74,6 +75,7 @@ export default function App() {
   const [showAliases, setShowAliases] = useState(false);
   const [probationary, setProbationary] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSecurity, setShowSecurity] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MessageSummary[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -338,6 +340,13 @@ export default function App() {
           <Settings className="w-4 h-4" />
         </button>
         <button
+          onClick={() => setShowSecurity(true)}
+          className="p-1.5 rounded hover:bg-zsborder/40 text-zsmuted text-xs"
+          title="Two-factor authentication"
+        >
+          2FA
+        </button>
+        <button
           onClick={() => setShowHelp(true)}
           className="p-1.5 rounded hover:bg-zsborder/40 text-zsmuted"
           title="Keyboard shortcuts (?)"
@@ -463,6 +472,7 @@ export default function App() {
         />
       )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+      {showSecurity && <TotpSetupModal onClose={() => setShowSecurity(false)} />}
     </div>
   );
 }
