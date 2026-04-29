@@ -20,9 +20,13 @@ const defaultDataDir = resolve(SERVER_ROOT, 'data');
 //   'relay'                       — uses an SMTP relay (RELAY_HOST/PORT/USER/PASS) for real delivery.
 const sendMode = (process.env.SEND_MODE ?? 'loopback') as 'loopback' | 'relay';
 
-export function parseSessionSecret(input: { value: string | undefined; isTest: boolean }): string {
+// SESSION_SECRET is required ONLY in production. In dev and test we fall back to
+// a stable known value so `npm run dev`, `npm run seed:owner`, and the test suite
+// all work out-of-the-box. The fail-fast in production guards against accidentally
+// shipping with no secret configured.
+export function parseSessionSecret(input: { value: string | undefined; isProd: boolean }): string {
   if (!input.value) {
-    if (input.isTest) return 'a'.repeat(64);
+    if (!input.isProd) return 'a'.repeat(64);
     throw new Error('Missing required env var: SESSION_SECRET');
   }
   if (input.value.length < 32) {
@@ -56,7 +60,7 @@ export const config = {
   },
   sessionSecret: parseSessionSecret({
     value: process.env.SESSION_SECRET,
-    isTest: process.env.NODE_ENV === 'test',
+    isProd: process.env.NODE_ENV === 'production',
   }),
   allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
