@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { getOwnerByEmail, verifyPassword } from '../users.js';
+import { getOwnerByEmail, getOwnerById, verifyPassword } from '../users.js';
 import { verifyTotp } from '../totp.js';
 import { createSession, destroySession, SESSION_COOKIE_NAME } from '../sessions.js';
 import { config } from '../config.js';
@@ -74,5 +74,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
     return { ok: true };
+  });
+
+  app.get('/api/auth/me', async (req, reply) => {
+    const userId = (req as any).user?.id;
+    if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    const u = getOwnerById(userId);
+    if (!u) { reply.code(401).send({ error: 'unauthorized' }); return; }
+    return { user: { id: u.id, email: u.email, totp_enabled: !!u.totp_secret } };
   });
 }
