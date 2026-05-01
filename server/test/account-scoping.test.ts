@@ -353,4 +353,101 @@ describe('account scoping', () => {
       await app.close();
     }
   });
+
+  // ---- draft cross-tenant tests ----
+
+  async function setupTwoAccountsWithDraft() {
+    const base = await setupTwoAccounts();
+    const draftId = 'd_test_' + Math.random().toString(36).slice(2, 10);
+    db.prepare(
+      `INSERT INTO drafts (id, mailbox_id, to_addresses, subject, body_text, body_html, created_at, updated_at)
+       VALUES (?, ?, '[]', '', '', '', ?, ?)`,
+    ).run(draftId, base.mb2Id, Date.now(), Date.now());
+    return { ...base, mb2DraftId: draftId };
+  }
+
+  it("GET /api/drafts returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'GET',
+        url: `/api/drafts?mailboxId=${mb2Id}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("GET /api/drafts/:id returns 404 for another account's draft", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2DraftId } = await setupTwoAccountsWithDraft();
+      const r = await app.inject({
+        method: 'GET',
+        url: `/api/drafts/${mb2DraftId}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/drafts returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const before = db.prepare('SELECT COUNT(*) AS c FROM drafts WHERE mailbox_id = ?').get(mb2Id) as { c: number };
+      const r = await app.inject({
+        method: 'POST',
+        url: '/api/drafts',
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { mailboxId: mb2Id, subject: 'phish', text: 'x' },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT COUNT(*) AS c FROM drafts WHERE mailbox_id = ?').get(mb2Id) as { c: number };
+      expect(after.c).toBe(before.c);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("PATCH /api/drafts/:id returns 404 for another account's draft", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2DraftId } = await setupTwoAccountsWithDraft();
+      const before = db.prepare('SELECT subject FROM drafts WHERE id = ?').get(mb2DraftId);
+      const r = await app.inject({
+        method: 'PATCH',
+        url: `/api/drafts/${mb2DraftId}`,
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { subject: 'PWNED' },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT subject FROM drafts WHERE id = ?').get(mb2DraftId);
+      expect(after).toEqual(before);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("DELETE /api/drafts/:id returns 404 for another account's draft", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2DraftId } = await setupTwoAccountsWithDraft();
+      const r = await app.inject({
+        method: 'DELETE',
+        url: `/api/drafts/${mb2DraftId}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const stillExists = db.prepare('SELECT id FROM drafts WHERE id = ?').get(mb2DraftId);
+      expect(stillExists).toBeTruthy();
+    } finally {
+      await app.close();
+    }
+  });
 });

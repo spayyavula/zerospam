@@ -94,6 +94,17 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return !!r;
   }
 
+  function ownsDraft(accountId: number, draftId: string): boolean {
+    const r = db
+      .prepare(`
+        SELECT 1 FROM drafts d
+        JOIN mailboxes b ON b.id = d.mailbox_id
+        WHERE d.id = ? AND b.account_id = ?
+      `)
+      .get(draftId, accountId);
+    return !!r;
+  }
+
   app.get('/api/mailboxes', async (req) => {
     const accountId = (req as any).account?.id ?? 0;
     return db
@@ -726,8 +737,13 @@ export async function startApi(opts: { inject?: boolean } = {}) {
 
   const draftPatch = draftIn.partial().omit({ mailboxId: true });
 
-  app.get('/api/drafts', async (req) => {
-    const { mailboxId } = z.object({ mailboxId: z.coerce.number() }).parse(req.query);
+  app.get('/api/drafts', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const mailboxId = Number((req.query as { mailboxId?: string }).mailboxId);
+    if (!ownsMailbox(accountId, mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     return db
       .prepare(
         `SELECT id, mailbox_id, to_addresses, cc_addresses, bcc_addresses,
@@ -739,14 +755,22 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.get('/api/drafts/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsDraft(accountId, id)) return reply.code(404).send({ error: 'draft not found' });
     const row = db.prepare('SELECT * FROM drafts WHERE id = ?').get(id);
     if (!row) return reply.code(404).send({ error: 'not found' });
     return row;
   });
 
-  app.post('/api/drafts', async (req) => {
+  app.post('/api/drafts', async (req, reply) => {
     const b = draftIn.parse(req.body);
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    if (!ownsMailbox(accountId, b.mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const id = (await import('nanoid')).nanoid();
     const now = Date.now();
     db.prepare(
@@ -773,7 +797,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.patch('/api/drafts/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsDraft(accountId, id)) return reply.code(404).send({ error: 'draft not found' });
     const b = draftPatch.parse(req.body);
     const exists = db.prepare('SELECT id FROM drafts WHERE id = ?').get(id);
     if (!exists) return reply.code(404).send({ error: 'not found' });
@@ -813,8 +840,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return { ok: true };
   });
 
-  app.delete('/api/drafts/:id', async (req) => {
+  app.delete('/api/drafts/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsDraft(accountId, id)) return reply.code(404).send({ error: 'draft not found' });
     db.prepare('DELETE FROM drafts WHERE id = ?').run(id);
     return { ok: true };
   });
