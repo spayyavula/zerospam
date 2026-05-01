@@ -70,6 +70,8 @@ export const config = {
   isProd: process.env.NODE_ENV === 'production',
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? '',
   digestTickIntervalSec: envInt('DIGEST_TICK_INTERVAL_SEC', 60),
+  signupDomain: process.env.SIGNUP_DOMAIN ?? 'zero-spam.email',
+  verifyTokenExpiryHours: envInt('VERIFY_TOKEN_EXPIRY_HOURS', 24),
 } as const;
 
 export type Config = typeof config;

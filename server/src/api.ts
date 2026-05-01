@@ -49,6 +49,8 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/api/health',
     '/api/auth/login',
     '/api/auth/logout',
+    '/api/auth/signup',
+    '/auth/verify',
     '/public/digest/allow',
   ];
   app.addHook('preHandler', async (req, reply) => {
@@ -57,6 +59,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   await app.register(authRoutes);
+  await app.register((await import('./routes/signup.js')).signupRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
 
