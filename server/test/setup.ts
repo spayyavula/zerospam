@@ -32,6 +32,7 @@ beforeEach(() => {
     DELETE FROM sessions;
     DELETE FROM users;
     DELETE FROM accounts WHERE id != ${DEFAULT_ACCOUNT_ID};
+    DELETE FROM digest_tokens_used;
   `);
 });
 

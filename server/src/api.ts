@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import { createReadStream, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { db, runInTx } from './db.js';
 import type { AttachmentRow, MessageRow } from './db.js';
@@ -1162,8 +1163,13 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   // ---- public digest action routes ----
-  // No auth, no CORS, no rate limit (v1). Reverse proxy can lock down /api/* if needed.
-  app.get('/public/digest/allow', async (req, reply) => {
+  // No auth, no CORS. Rate-limited (config.rateLimitAuthPerMin) and
+  // single-use via the digest_tokens_used jti store: a token that already
+  // ran the action returns the expired page so leaked links cannot be
+  // replayed until exp.
+  app.get('/public/digest/allow', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const { renderConfirmPage, renderExpiredPage } = await import('./digest-pages.js');
     const { verify } = await import('./digest-token.js');
     const { loadDigestSigningSecret } = await import('./config.js');
@@ -1180,6 +1186,14 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       reply.type('text/html');
       return renderExpiredPage();
     }
+    const tokenHash = createHash('sha256').update(t).digest('hex');
+    const alreadyUsed = db
+      .prepare('SELECT 1 FROM digest_tokens_used WHERE token_hash = ?')
+      .get(tokenHash);
+    if (alreadyUsed) {
+      reply.type('text/html');
+      return renderExpiredPage();
+    }
     const count = (db
       .prepare(
         "SELECT COUNT(*) AS c FROM messages WHERE mailbox_id = ? AND folder = 'quarantine' AND from_address = ?",
@@ -1189,7 +1203,9 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return renderConfirmPage({ token: t, sender: payload.sender, quarantinedCount: count });
   });
 
-  app.post('/public/digest/allow', async (req, reply) => {
+  app.post('/public/digest/allow', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const { renderSuccessPage, renderExpiredPage } = await import('./digest-pages.js');
     const { verify } = await import('./digest-token.js');
     const { loadDigestSigningSecret } = await import('./config.js');
@@ -1207,6 +1223,17 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       .prepare('SELECT id FROM mailboxes WHERE id = ?')
       .get(payload.mailboxId) as { id: number } | undefined;
     if (!mb) {
+      reply.type('text/html');
+      return renderExpiredPage();
+    }
+
+    // Atomic single-use: INSERT OR IGNORE returns changes=0 if the hash
+    // is already present, which races safely against concurrent POSTs.
+    const tokenHash = createHash('sha256').update(t).digest('hex');
+    const claim = db
+      .prepare('INSERT OR IGNORE INTO digest_tokens_used (token_hash, used_at) VALUES (?, ?)')
+      .run(tokenHash, Date.now());
+    if (claim.changes === 0) {
       reply.type('text/html');
       return renderExpiredPage();
     }

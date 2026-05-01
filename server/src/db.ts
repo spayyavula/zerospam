@@ -203,6 +203,14 @@ CREATE TABLE IF NOT EXISTS accounts (
   plan        TEXT NOT NULL DEFAULT 'free',
   created_at  INTEGER NOT NULL
 );
+
+-- Digest-allow tokens are HMAC-signed and time-bounded, but a leaked token
+-- (forwarded mail, archives) can be replayed until exp. We record the token
+-- hash on first use so subsequent attempts fall through to the expired page.
+CREATE TABLE IF NOT EXISTS digest_tokens_used (
+  token_hash  TEXT PRIMARY KEY,
+  used_at     INTEGER NOT NULL
+);
 `;
 
 db.exec(SCHEMA);

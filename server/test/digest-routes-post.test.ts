@@ -47,7 +47,35 @@ describe('POST /public/digest/allow', () => {
     }
   });
 
-  it('is idempotent: clicking twice does not duplicate the rule and reports 0 moved', async () => {
+  it('rejects token replay: second POST returns expired page and does not duplicate rule', async () => {
+    const app = await startApi();
+    try {
+      const id = seedMailbox('alice@example.com');
+      await injectQuarantined({ to: 'alice@example.com', from: 'sales@acme.com', subject: 'a' });
+      const t = sign(
+        { v: 1, mailboxId: id, sender: 'sales@acme.com', action: 'allow-forever', exp: Date.now() + 86400000 },
+        loadDigestSigningSecret(),
+      );
+      const r1 = await postForm(app, t);
+      expect(r1.statusCode).toBe(200);
+      expect(r1.body.toLowerCase()).not.toContain('expired or invalid');
+
+      const r2 = await postForm(app, t);
+      expect(r2.statusCode).toBe(200);
+      expect(r2.body.toLowerCase()).toContain('expired or invalid');
+
+      const rules = db
+        .prepare(
+          "SELECT id FROM whitelist_rules WHERE mailbox_id = ? AND kind = 'address' AND pattern = ?",
+        )
+        .all(id, 'sales@acme.com');
+      expect(rules).toHaveLength(1);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('GET returns expired page after the token has been consumed by POST', async () => {
     const app = await startApi();
     try {
       const id = seedMailbox('alice@example.com');
@@ -57,17 +85,12 @@ describe('POST /public/digest/allow', () => {
         loadDigestSigningSecret(),
       );
       await postForm(app, t);
-      const r2 = await postForm(app, t);
-      expect(r2.statusCode).toBe(200);
-      expect(r2.body.toLowerCase()).toContain('already trusted');
-      expect(r2.body).toContain('0 message');
-
-      const rules = db
-        .prepare(
-          "SELECT id FROM whitelist_rules WHERE mailbox_id = ? AND kind = 'address' AND pattern = ?",
-        )
-        .all(id, 'sales@acme.com');
-      expect(rules).toHaveLength(1);
+      const getR = await app.inject({
+        method: 'GET',
+        url: `/public/digest/allow?t=${encodeURIComponent(t)}`,
+      });
+      expect(getR.statusCode).toBe(200);
+      expect(getR.body.toLowerCase()).toContain('expired or invalid');
     } finally {
       await app.close();
     }
