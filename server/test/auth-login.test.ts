@@ -139,6 +139,8 @@ describe('login is blocked until verified', () => {
       headers: { 'content-type': 'application/json' },
       payload: { email, password },
     });
+    // Allow the fire-and-forget verification-resend microtask to run before asserting
+    await new Promise((resolve) => setImmediate(resolve));
     expect(r.statusCode).toBe(401);
     expect(r.json().error).toBe('invalid-credentials');
     // Verification-resend email was dispatched

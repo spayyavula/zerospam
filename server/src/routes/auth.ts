@@ -20,7 +20,10 @@ async function dispatchVerificationEmail(app: FastifyInstance, userId: number, r
       LIMIT 1
     `)
     .get(userId) as { id: number } | undefined;
-  if (!mb) return;  // No mailbox to send from — silently skip
+  if (!mb) {
+    app.log.warn({ userId }, 'verification-resend skipped: no mailbox for account');
+    return;
+  }
 
   const expHours = config.verifyTokenExpiryHours;
   const exp = Date.now() + expHours * 3600 * 1000;
@@ -81,13 +84,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     if (!user.email_verified_at) {
       recordAudit({ event: 'login.fail', userId: user.id, detail: { reason: 'email-not-verified' }, ip, userAgent: ua });
-      // Best-effort verification-resend; don't fail the request if mail fails.
-      // Returns the same generic 401 as bad-password / unknown-email to avoid an existence oracle.
-      try {
-        await dispatchVerificationEmail(app, user.id, email);
-      } catch (e) {
+      // Fire-and-forget verification-resend: do not await it. Awaiting would create
+      // a timing oracle (this branch becomes measurably slower than bad-password),
+      // recreating the email-existence leak the generic 401 was meant to close.
+      void dispatchVerificationEmail(app, user.id, email).catch((e) => {
         app.log.warn({ err: e, userId: user.id }, 'login: verification-resend dispatch failed');
-      }
+      });
       reply.code(401).send({ error: 'invalid-credentials' });
       return;
     }
