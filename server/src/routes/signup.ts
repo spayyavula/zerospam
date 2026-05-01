@@ -128,23 +128,32 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/auth/verify', async (req, reply) => {
     const t = (req.query as { t?: string }).t ?? '';
-    const payload = verifyVerifyToken(t, config.sessionSecret, Date.now());
-    if (!payload) {
+    try {
+      const payload = verifyVerifyToken(t, config.sessionSecret, Date.now());
+      if (!payload) {
+        app.log.warn({ tokenPrefix: t.slice(0, 8) }, 'auth/verify: invalid or expired token');
+        reply.type('text/html');
+        return renderVerifyResultHtml({ ok: false });
+      }
+      const user = db
+        .prepare('SELECT id, email_verified_at FROM users WHERE id = ?')
+        .get(payload.userId) as { id: number; email_verified_at: number | null } | undefined;
+      if (!user) {
+        app.log.warn({ userId: payload.userId }, 'auth/verify: token references unknown user');
+        reply.type('text/html');
+        return renderVerifyResultHtml({ ok: false });
+      }
+      if (!user.email_verified_at) {
+        db.prepare('UPDATE users SET email_verified_at = ? WHERE id = ?').run(Date.now(), user.id);
+        app.log.info({ userId: user.id }, 'auth/verify: email verified');
+      }
+      reply.type('text/html');
+      return renderVerifyResultHtml({ ok: true });
+    } catch (e) {
+      app.log.error({ err: e }, 'auth/verify: unexpected error');
       reply.type('text/html');
       return renderVerifyResultHtml({ ok: false });
     }
-    const user = db
-      .prepare('SELECT id, email_verified_at FROM users WHERE id = ?')
-      .get(payload.userId) as { id: number; email_verified_at: number | null } | undefined;
-    if (!user) {
-      reply.type('text/html');
-      return renderVerifyResultHtml({ ok: false });
-    }
-    if (!user.email_verified_at) {
-      db.prepare('UPDATE users SET email_verified_at = ? WHERE id = ?').run(Date.now(), user.id);
-    }
-    reply.type('text/html');
-    return renderVerifyResultHtml({ ok: true });
   });
 }
 

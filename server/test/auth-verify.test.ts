@@ -85,4 +85,35 @@ describe('GET /auth/verify', () => {
       await app.close();
     }
   });
+
+  it('renders error page when token is valid but user does not exist', async () => {
+    const app = await buildApp();
+    try {
+      const token = signVerifyToken(
+        { v: 1, userId: 99999, exp: Date.now() + 60_000 },
+        config.sessionSecret,
+      );
+      const r = await app.inject({ method: 'GET', url: `/auth/verify?t=${encodeURIComponent(token)}` });
+      expect(r.statusCode).toBe(200);
+      expect(r.body.toLowerCase()).toMatch(/invalid|expired/);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not overwrite email_verified_at on a second click', async () => {
+    const app = await buildApp();
+    try {
+      const { userId } = await signUp(app, 'dave', 'dave@example.com');
+      const token = signVerifyToken({ v: 1, userId, exp: Date.now() + 60_000 }, config.sessionSecret);
+      await app.inject({ method: 'GET', url: `/auth/verify?t=${encodeURIComponent(token)}` });
+      const t1 = (db.prepare('SELECT email_verified_at FROM users WHERE id = ?').get(userId) as { email_verified_at: number }).email_verified_at;
+      await new Promise((r) => setTimeout(r, 5));
+      await app.inject({ method: 'GET', url: `/auth/verify?t=${encodeURIComponent(token)}` });
+      const t2 = (db.prepare('SELECT email_verified_at FROM users WHERE id = ?').get(userId) as { email_verified_at: number }).email_verified_at;
+      expect(t2).toBe(t1);
+    } finally {
+      await app.close();
+    }
+  });
 });
