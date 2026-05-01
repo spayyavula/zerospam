@@ -5,6 +5,13 @@ export type Mailbox = {
   display_name: string | null;
   quarantine_ttl_hours: number;
   created_at: number;
+  digest_enabled: number;
+  digest_hour: number;
+  digest_recipient_mode: 'external' | 'loopback';
+  owner_email: string | null;
+  last_digest_sent_at: number | null;
+  digest_last_error: string | null;
+  digest_consecutive_failures: number;
 };
 
 export type FolderName = 'inbox' | 'quarantine' | 'sent' | 'trash';

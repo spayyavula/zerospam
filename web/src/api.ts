@@ -39,8 +39,17 @@ export const api = {
   mailboxes: () => j<Mailbox[]>('/api/mailboxes'),
   createMailbox: (b: { address: string; displayName?: string; quarantineTtlHours?: number }) =>
     j<{ id: number }>('/api/mailboxes', { method: 'POST', body: JSON.stringify(b) }),
-  patchMailbox: (id: number, b: { displayName?: string | null; quarantineTtlHours?: number }) =>
-    j<{ ok: true }>(`/api/mailboxes/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
+  patchMailbox: (
+    id: number,
+    b: {
+      displayName?: string | null;
+      quarantineTtlHours?: number;
+      digestEnabled?: boolean;
+      digestHour?: number;
+      digestRecipientMode?: 'external' | 'loopback';
+      ownerEmail?: string | null;
+    },
+  ) => j<{ ok: true }>(`/api/mailboxes/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
   deleteMailbox: (id: number) =>
     j<{ ok: true }>(`/api/mailboxes/${id}`, { method: 'DELETE' }),
   counts: (mailboxId: number) => j<Counts>(`/api/mailboxes/${mailboxId}/counts`),
