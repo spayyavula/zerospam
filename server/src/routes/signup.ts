@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { db } from '../db.js';
+import { db, runInTx } from '../db.js';
 import { config } from '../config.js';
-import { hashPassword, getOwnerByEmail } from '../users.js';
+import { hashPassword } from '../users.js';
 import { createAccount } from '../accounts.js';
 import { isValidUsername, isReserved, isUsernameAvailable } from '../usernames.js';
 import { ensureDkim } from '../dkim.js';
@@ -17,7 +17,14 @@ const signupSchema = z.object({
 });
 
 export async function signupRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/api/auth/signup', async (req, reply) => {
+  app.post('/api/auth/signup', {
+    config: { rateLimit: { max: config.rateLimitSignupPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    // Guard: PUBLIC_BASE_URL required so verify URL is absolute
+    if (!config.publicBaseUrl) {
+      return reply.code(503).send({ error: 'signup unavailable: PUBLIC_BASE_URL not configured' });
+    }
+
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
       const firstIssue = parsed.error.issues[0];
@@ -39,7 +46,7 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Check email uniqueness
-    const existingUser = getOwnerByEmail(email);
+    const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase()) as { id: number } | undefined;
     if (existingUser) {
       return reply.code(409).send({ error: 'email already registered' });
     }
@@ -49,39 +56,51 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(409).send({ error: 'username already taken' });
     }
 
-    // Create account
-    const account = createAccount(`account-${username}`);
-
-    // Create user
+    // Hash password BEFORE transaction (async; better-sqlite3 transactions are sync)
     const passwordHash = await hashPassword(password);
-    const userRow = db
-      .prepare(
-        `INSERT INTO users (email, password_hash, account_id, created_at)
-         VALUES (?, ?, ?, ?) RETURNING id`,
-      )
-      .get(email.toLowerCase(), passwordHash, account.id, Date.now()) as { id: number };
-    const userId = userRow.id;
 
-    // Ensure domain + DKIM exist
-    const domainRow = db
-      .prepare(
-        `INSERT INTO domains (name, created_at, account_id)
-         VALUES (?, ?, ?)
-         ON CONFLICT(name) DO UPDATE SET name = excluded.name
-         RETURNING id`,
-      )
-      .get(config.signupDomain, Date.now(), account.id) as { id: number };
-    ensureDkim(domainRow.id);
+    // Wrap all 4 DB writes in a transaction so no orphaned rows on partial failure
+    let userId: number, accountId: number, mailboxId: number, domainId: number;
+    try {
+      ({ userId, accountId, mailboxId, domainId } = runInTx(() => {
+        const account = createAccount(`account-${username}`);
+        const userRow = db
+          .prepare(
+            `INSERT INTO users (email, password_hash, account_id, created_at)
+             VALUES (?, ?, ?, ?) RETURNING id`,
+          )
+          .get(email.toLowerCase(), passwordHash, account.id, Date.now()) as { id: number };
+        const domainRow = db
+          .prepare(
+            `INSERT INTO domains (name, created_at, account_id)
+             VALUES (?, ?, ?)
+             ON CONFLICT(name) DO UPDATE SET name = excluded.name
+             RETURNING id`,
+          )
+          .get(config.signupDomain, Date.now(), account.id) as { id: number };
+        const address = `${username.toLowerCase()}@${config.signupDomain}`;
+        const mailboxRow = db
+          .prepare(
+            `INSERT INTO mailboxes (address, domain_id, display_name, quarantine_ttl_hours, account_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+          )
+          .get(address, domainRow.id, null, config.quarantineTtlHours, account.id, Date.now()) as { id: number };
+        return { userId: userRow.id, accountId: account.id, mailboxId: mailboxRow.id, domainId: domainRow.id };
+      }));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/UNIQUE constraint failed: users\.email/.test(msg)) {
+        return reply.code(409).send({ error: 'email already registered' });
+      }
+      if (/UNIQUE constraint failed: mailboxes\.address/.test(msg)) {
+        return reply.code(409).send({ error: 'username already taken' });
+      }
+      app.log.error({ err: e }, 'signup: unexpected db error');
+      return reply.code(500).send({ error: 'signup failed' });
+    }
 
-    // Create mailbox
-    const address = `${username.toLowerCase()}@${config.signupDomain}`;
-    const mailboxRow = db
-      .prepare(
-        `INSERT INTO mailboxes (address, domain_id, display_name, quarantine_ttl_hours, account_id, created_at)
-         VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
-      )
-      .get(address, domainRow.id, username, 168, account.id, Date.now()) as { id: number };
-    const mailboxId = mailboxRow.id;
+    // ensureDkim and email dispatch run AFTER commit
+    ensureDkim(domainId);
 
     // Sign verify token
     const expiresAt = Date.now() + config.verifyTokenExpiryHours * 60 * 60 * 1000;
@@ -104,6 +123,6 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
       app.log.warn({ err: e }, 'signup: verification email dispatch failed');
     }
 
-    return reply.code(201).send({ userId, accountId: account.id });
+    return reply.code(201).send({ userId, accountId });
   });
 }

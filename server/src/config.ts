@@ -66,6 +66,7 @@ export const config = {
   }),
   allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
+  rateLimitSignupPerMin: envInt('RATE_LIMIT_SIGNUP_PER_MIN', 5),
   rateLimitAuthPerMin: envInt('RATE_LIMIT_AUTH_PER_MIN', 30),
   isProd: process.env.NODE_ENV === 'production',
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? '',

@@ -11,6 +11,8 @@ import Fastify from 'fastify';
 import { signupRoutes } from '../src/routes/signup.js';
 import { db } from '../src/db.js';
 import * as sender from '../src/sender.js';
+import * as usernames from '../src/usernames.js';
+import { seedMailbox } from './helpers.js';
 
 async function buildApp() {
   const app = Fastify({ logger: false });
@@ -148,5 +150,54 @@ describe('POST /api/auth/signup', () => {
     });
     expect(r.statusCode).toBe(400);
     expect(r.json().error).toMatch(/password/i);
+  });
+
+  it('rejects race-induced duplicate username with 409 (not 500)', async () => {
+    // Bypass the pre-check so it passes, but the mailbox INSERT will collide
+    vi.spyOn(usernames, 'isUsernameAvailable').mockReturnValueOnce(true);
+    seedMailbox('frank@zero-spam.email');
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/auth/signup',
+      headers: { 'content-type': 'application/json' },
+      payload: { email: 'frank@example.com', password: 'correct-horse-battery-staple', username: 'frank' },
+    });
+    expect(r.statusCode).toBe(409);
+    expect(r.json().error).toMatch(/username/i);
+  });
+
+  it('lowercases email on storage and rejects case-variant duplicates', async () => {
+    const app = await buildApp();
+    const r1 = await app.inject({
+      method: 'POST',
+      url: '/api/auth/signup',
+      headers: { 'content-type': 'application/json' },
+      payload: { email: 'Grace@Example.com', password: 'correct-horse-battery-staple', username: 'grace' },
+    });
+    expect(r1.statusCode).toBe(201);
+    const stored = db.prepare('SELECT email FROM users WHERE id = ?').get(r1.json().userId) as { email: string };
+    expect(stored.email).toBe('grace@example.com');
+
+    const r2 = await app.inject({
+      method: 'POST',
+      url: '/api/auth/signup',
+      headers: { 'content-type': 'application/json' },
+      payload: { email: 'grace@example.com', password: 'correct-horse-battery-staple', username: 'grace2' },
+    });
+    expect(r2.statusCode).toBe(409);
+    expect(r2.json().error).toMatch(/email/i);
+  });
+
+  it.each(['.alice', 'alice.', 'a..b', 'a__b', 'a-_b'])('rejects username with bad separators: %s', async (badname) => {
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/auth/signup',
+      headers: { 'content-type': 'application/json' },
+      payload: { email: 'x@example.com', password: 'correct-horse-battery-staple', username: badname },
+    });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error).toMatch(/username/i);
   });
 });
