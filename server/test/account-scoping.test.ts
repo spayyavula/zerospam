@@ -450,4 +450,98 @@ describe('account scoping', () => {
       await app.close();
     }
   });
+
+  // ---- alias cross-tenant tests ----
+
+  async function setupTwoAccountsWithAlias() {
+    const base = await setupTwoAccounts();
+    const alias = db.prepare(
+      `INSERT INTO aliases (mailbox_id, address, label, created_at) VALUES (?, ?, ?, ?) RETURNING id`,
+    ).get(base.mb2Id, `vendor-${Math.random().toString(36).slice(2, 8)}@zero-spam.email`, 'vendor-test', Date.now()) as { id: number };
+    return { ...base, mb2AliasId: alias.id };
+  }
+
+  it("GET /api/aliases returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'GET',
+        url: `/api/aliases?mailboxId=${mb2Id}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/aliases returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const before = db.prepare('SELECT COUNT(*) AS c FROM aliases WHERE mailbox_id = ?').get(mb2Id) as { c: number };
+      const r = await app.inject({
+        method: 'POST',
+        url: '/api/aliases',
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { mailboxId: mb2Id, label: 'phish' },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT COUNT(*) AS c FROM aliases WHERE mailbox_id = ?').get(mb2Id) as { c: number };
+      expect(after.c).toBe(before.c);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/aliases/:id/abuse returns 404 for another account's alias", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2AliasId } = await setupTwoAccountsWithAlias();
+      const before = db.prepare('SELECT abused FROM aliases WHERE id = ?').get(mb2AliasId);
+      const r = await app.inject({
+        method: 'POST',
+        url: `/api/aliases/${mb2AliasId}/abuse`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT abused FROM aliases WHERE id = ?').get(mb2AliasId);
+      expect(after).toEqual(before);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/aliases/:id/restore returns 404 for another account's alias", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2AliasId } = await setupTwoAccountsWithAlias();
+      const r = await app.inject({
+        method: 'POST',
+        url: `/api/aliases/${mb2AliasId}/restore`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("DELETE /api/aliases/:id returns 404 for another account's alias", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2AliasId } = await setupTwoAccountsWithAlias();
+      const r = await app.inject({
+        method: 'DELETE',
+        url: `/api/aliases/${mb2AliasId}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const stillExists = db.prepare('SELECT id FROM aliases WHERE id = ?').get(mb2AliasId);
+      expect(stillExists).toBeTruthy();
+    } finally {
+      await app.close();
+    }
+  });
 });

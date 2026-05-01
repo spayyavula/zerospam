@@ -105,6 +105,17 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return !!r;
   }
 
+  function ownsAlias(accountId: number, aliasId: number): boolean {
+    const r = db
+      .prepare(`
+        SELECT 1 FROM aliases a
+        JOIN mailboxes b ON b.id = a.mailbox_id
+        WHERE a.id = ? AND b.account_id = ?
+      `)
+      .get(aliasId, accountId);
+    return !!r;
+  }
+
   app.get('/api/mailboxes', async (req) => {
     const accountId = (req as any).account?.id ?? 0;
     return db
@@ -1047,8 +1058,13 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   // ---- aliases (disposable per-signup addresses) ----
-  app.get('/api/aliases', async (req) => {
-    const { mailboxId } = z.object({ mailboxId: z.coerce.number() }).parse(req.query);
+  app.get('/api/aliases', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const mailboxId = Number((req.query as { mailboxId?: string }).mailboxId);
+    if (!ownsMailbox(accountId, mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     return db
       .prepare(
         'SELECT * FROM aliases WHERE mailbox_id = ? ORDER BY created_at DESC',
@@ -1073,7 +1089,12 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   }
 
   app.post('/api/aliases', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const b = aliasIn.parse(req.body);
+    if (!ownsMailbox(accountId, b.mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const mb = db.prepare('SELECT * FROM mailboxes WHERE id = ?').get(b.mailboxId) as
       | { address: string; domain_id: number }
       | undefined;
@@ -1107,21 +1128,36 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return { id: result.id, address, expires_at };
   });
 
-  app.post('/api/aliases/:id/abuse', async (req) => {
-    const { id } = req.params as { id: string };
-    db.prepare('UPDATE aliases SET abused = 1 WHERE id = ?').run(Number(id));
+  app.post('/api/aliases/:id/abuse', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    if (!ownsAlias(accountId, id)) {
+      return reply.code(404).send({ error: 'alias not found' });
+    }
+    db.prepare('UPDATE aliases SET abused = 1 WHERE id = ?').run(id);
     return { ok: true };
   });
 
-  app.post('/api/aliases/:id/restore', async (req) => {
-    const { id } = req.params as { id: string };
-    db.prepare('UPDATE aliases SET abused = 0 WHERE id = ?').run(Number(id));
+  app.post('/api/aliases/:id/restore', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    if (!ownsAlias(accountId, id)) {
+      return reply.code(404).send({ error: 'alias not found' });
+    }
+    db.prepare('UPDATE aliases SET abused = 0 WHERE id = ?').run(id);
     return { ok: true };
   });
 
-  app.delete('/api/aliases/:id', async (req) => {
-    const { id } = req.params as { id: string };
-    db.prepare('DELETE FROM aliases WHERE id = ?').run(Number(id));
+  app.delete('/api/aliases/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    if (!ownsAlias(accountId, id)) {
+      return reply.code(404).send({ error: 'alias not found' });
+    }
+    db.prepare('DELETE FROM aliases WHERE id = ?').run(id);
     return { ok: true };
   });
 
