@@ -3,6 +3,9 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
 
+export const DEFAULT_ACCOUNT_ID = 1;
+export const DEFAULT_ACCOUNT_NAME = 'default';
+
 mkdirSync(config.dataDir, { recursive: true });
 
 export const db = new DatabaseSync(join(config.dataDir, 'zerospam.sqlite'));
@@ -254,38 +257,58 @@ if (!domainCols.has('dkim_public_pem')) {
   db.exec('ALTER TABLE domains ADD COLUMN dkim_public_pem TEXT');
 }
 
+// Seed default account BEFORE account_id migrations so the FK DEFAULT 1
+// reference resolves for any rows that exist when the column is added.
+const defaultAccount = db
+  .prepare(`SELECT id FROM accounts WHERE id = ${DEFAULT_ACCOUNT_ID}`)
+  .get() as { id: number } | undefined;
+if (!defaultAccount) {
+  db.prepare(
+    `INSERT INTO accounts (id, name, plan, created_at) VALUES (${DEFAULT_ACCOUNT_ID}, '${DEFAULT_ACCOUNT_NAME}', 'free', ?)`,
+  ).run(Date.now());
+}
+
 const userCols = colsOf('users');
 if (!userCols.has('account_id')) {
-  db.exec('ALTER TABLE users ADD COLUMN account_id INTEGER');
+  db.exec(
+    `ALTER TABLE users ADD COLUMN account_id INTEGER NOT NULL DEFAULT ${DEFAULT_ACCOUNT_ID} REFERENCES accounts(id) ON DELETE RESTRICT`,
+  );
 }
 if (!userCols.has('email_verified_at')) {
   db.exec('ALTER TABLE users ADD COLUMN email_verified_at INTEGER');
 }
 const mailboxCols2 = colsOf('mailboxes');
 if (!mailboxCols2.has('account_id')) {
-  db.exec('ALTER TABLE mailboxes ADD COLUMN account_id INTEGER');
+  db.exec(
+    `ALTER TABLE mailboxes ADD COLUMN account_id INTEGER NOT NULL DEFAULT ${DEFAULT_ACCOUNT_ID} REFERENCES accounts(id) ON DELETE RESTRICT`,
+  );
 }
 if (!mailboxCols2.has('provider')) {
-  db.exec('ALTER TABLE mailboxes ADD COLUMN provider TEXT');
+  db.exec(
+    `ALTER TABLE mailboxes ADD COLUMN provider TEXT CHECK(provider IS NULL OR provider IN ('gmail','outlook'))`,
+  );
 }
 const domainCols2 = colsOf('domains');
 if (!domainCols2.has('account_id')) {
-  db.exec('ALTER TABLE domains ADD COLUMN account_id INTEGER');
+  db.exec(
+    `ALTER TABLE domains ADD COLUMN account_id INTEGER NOT NULL DEFAULT ${DEFAULT_ACCOUNT_ID} REFERENCES accounts(id) ON DELETE RESTRICT`,
+  );
 }
 
-// Seed default account and backfill account_id on existing rows.
-const defaultAccount = db.prepare('SELECT id FROM accounts WHERE id = 1').get() as
-  | { id: number }
-  | undefined;
-if (!defaultAccount) {
-  db.prepare(
-    `INSERT INTO accounts (id, name, plan, created_at) VALUES (1, 'default', 'free', ?)`,
-  ).run(Date.now());
-}
-db.exec(`UPDATE users      SET account_id = 1 WHERE account_id IS NULL`);
-db.exec(`UPDATE mailboxes  SET account_id = 1 WHERE account_id IS NULL`);
-db.exec(`UPDATE domains    SET account_id = 1 WHERE account_id IS NULL`);
-db.exec(`UPDATE users      SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
+// Backfill any rows that predated the account_id column (already-existing DBs
+// where the ALTER TABLE ran before the seed — belt-and-suspenders).
+db.exec(
+  `UPDATE users     SET account_id = ${DEFAULT_ACCOUNT_ID} WHERE account_id IS NULL`,
+);
+db.exec(
+  `UPDATE mailboxes SET account_id = ${DEFAULT_ACCOUNT_ID} WHERE account_id IS NULL`,
+);
+db.exec(
+  `UPDATE domains   SET account_id = ${DEFAULT_ACCOUNT_ID} WHERE account_id IS NULL`,
+);
+// Grandfather pre-feature users as verified — they predate the verification
+// gate and locking them out on next login would be a regression.
+db.exec(`UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
 
 // One-time backfill of attachment_count and FTS for messages predating this schema.
 // Idempotent — if the rows already exist, INSERT OR IGNORE skips them.

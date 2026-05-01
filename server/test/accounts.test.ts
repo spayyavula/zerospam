@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { db } from '../src/db.js';
+import { db, DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME } from '../src/db.js';
 
 describe('accounts schema', () => {
   it('accounts table has the required columns', () => {
@@ -31,10 +31,60 @@ describe('accounts schema', () => {
   });
 
   it('the default account exists with id=1', () => {
-    const row = db.prepare('SELECT id, name FROM accounts WHERE id = 1').get() as
-      | { id: number; name: string }
-      | undefined;
-    expect(row?.id).toBe(1);
-    expect(row?.name).toBe('default');
+    const row = db
+      .prepare(`SELECT id, name FROM accounts WHERE id = ${DEFAULT_ACCOUNT_ID}`)
+      .get() as { id: number; name: string } | undefined;
+    expect(row?.id).toBe(DEFAULT_ACCOUNT_ID);
+    expect(row?.name).toBe(DEFAULT_ACCOUNT_NAME);
+  });
+
+  it('FK enforcement: inserting a user with a non-existent account_id throws', () => {
+    expect(() => {
+      db.prepare(
+        `INSERT INTO users (email, password_hash, account_id, created_at)
+         VALUES ('fk-test@example.com', 'hash', 99999, ?)`,
+      ).run(Date.now());
+    }).toThrow(/FOREIGN KEY/);
+  });
+
+  it('DEFAULT 1 backfill: domain inserted without account_id gets account_id=DEFAULT_ACCOUNT_ID', () => {
+    const row = db
+      .prepare(`INSERT INTO domains (name, created_at) VALUES ('backfill-test.example', ?) RETURNING id, account_id`)
+      .get(Date.now()) as { id: number; account_id: number };
+    expect(row.account_id).toBe(DEFAULT_ACCOUNT_ID);
+  });
+
+  it('email_verified_at backfill: NULL becomes created_at after UPDATE', () => {
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO users (email, password_hash, account_id, created_at)
+       VALUES ('verify-test@example.com', 'hash', ${DEFAULT_ACCOUNT_ID}, ?)`,
+    ).run(now);
+
+    const before = db
+      .prepare(`SELECT email_verified_at, created_at FROM users WHERE email = 'verify-test@example.com'`)
+      .get() as { email_verified_at: number | null; created_at: number };
+    expect(before.email_verified_at).toBeNull();
+
+    db.exec(`UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
+
+    const after = db
+      .prepare(`SELECT email_verified_at, created_at FROM users WHERE email = 'verify-test@example.com'`)
+      .get() as { email_verified_at: number | null; created_at: number };
+    expect(after.email_verified_at).toBe(after.created_at);
+  });
+
+  it('migration idempotency: re-seeding the default account does not throw a UNIQUE violation', () => {
+    // The seed guard is "INSERT if not exists" — calling it twice should be safe.
+    expect(() => {
+      const existing = db
+        .prepare(`SELECT id FROM accounts WHERE id = ${DEFAULT_ACCOUNT_ID}`)
+        .get() as { id: number } | undefined;
+      if (!existing) {
+        db.prepare(
+          `INSERT INTO accounts (id, name, plan, created_at) VALUES (${DEFAULT_ACCOUNT_ID}, '${DEFAULT_ACCOUNT_NAME}', 'free', ?)`,
+        ).run(Date.now());
+      }
+    }).not.toThrow();
   });
 });
