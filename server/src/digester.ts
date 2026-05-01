@@ -170,3 +170,82 @@ export async function sendDigest(
   await ingest(raw, mb.address);
   return { delivered: true, recipientMode: 'loopback' };
 }
+
+const TWELVE_HOURS_MS = 12 * 3600 * 1000;
+const FAILURE_THRESHOLD = 7;
+
+function todayHourBoundaryMs(now: Date, hour: number): number {
+  const d = new Date(now);
+  d.setHours(hour, 0, 0, 0);
+  return d.getTime();
+}
+
+export type TickResult = {
+  sentForMailboxes: number[];
+  skippedEmpty: number[];
+  errored: number[];
+  autoDisabled: number[];
+};
+
+export async function tick(now: Date = new Date()): Promise<TickResult> {
+  const result: TickResult = {
+    sentForMailboxes: [],
+    skippedEmpty: [],
+    errored: [],
+    autoDisabled: [],
+  };
+
+  const mailboxes = db
+    .prepare('SELECT * FROM mailboxes WHERE digest_enabled = 1')
+    .all() as Mailbox[];
+
+  for (const mb of mailboxes) {
+    const todayBoundary = todayHourBoundaryMs(now, mb.digest_hour);
+    if (now.getTime() < todayBoundary) continue;
+
+    if (
+      mb.last_digest_sent_at !== null &&
+      mb.last_digest_sent_at >= todayBoundary
+    ) {
+      continue; // already sent today after the boundary
+    }
+
+    if (
+      mb.last_digest_sent_at !== null &&
+      now.getTime() - mb.last_digest_sent_at < TWELVE_HOURS_MS
+    ) {
+      continue; // 12h anti-double-send guard
+    }
+
+    try {
+      const content = await assembleDigest(mb.id);
+      if (content === null) {
+        db.prepare(
+          'UPDATE mailboxes SET last_digest_sent_at = ?, digest_consecutive_failures = 0, digest_last_error = NULL WHERE id = ?',
+        ).run(now.getTime(), mb.id);
+        result.skippedEmpty.push(mb.id);
+        continue;
+      }
+      await sendDigest(mb.id, content);
+      db.prepare(
+        'UPDATE mailboxes SET last_digest_sent_at = ?, digest_consecutive_failures = 0, digest_last_error = NULL WHERE id = ?',
+      ).run(now.getTime(), mb.id);
+      result.sentForMailboxes.push(mb.id);
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      const newFailures = mb.digest_consecutive_failures + 1;
+      const willDisable = newFailures >= FAILURE_THRESHOLD;
+      db.prepare(
+        `UPDATE mailboxes
+            SET digest_consecutive_failures = ?,
+                digest_last_error = ?,
+                digest_enabled = CASE WHEN ? THEN 0 ELSE digest_enabled END
+          WHERE id = ?`,
+      ).run(newFailures, msg.slice(0, 500), willDisable ? 1 : 0, mb.id);
+      result.errored.push(mb.id);
+      if (willDisable) result.autoDisabled.push(mb.id);
+    }
+  }
+
+  return result;
+}
