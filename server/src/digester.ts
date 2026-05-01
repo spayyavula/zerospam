@@ -12,7 +12,7 @@ import {
   renderHtml,
   renderText,
 } from './digest-template.js';
-import { config, loadDigestSigningSecret } from './config.js';
+import { config, loadDigestSigningSecret, assertPublicBaseUrlIfDigestEnabled } from './config.js';
 import { sendMessage } from './sender.js';
 import { ingest } from './ingest.js';
 
@@ -248,4 +248,26 @@ export async function tick(now: Date = new Date()): Promise<TickResult> {
   }
 
   return result;
+}
+
+export function startDigester(): () => void {
+  const anyEnabled = (db
+    .prepare('SELECT COUNT(*) AS c FROM mailboxes WHERE digest_enabled = 1')
+    .get() as { c: number }).c > 0;
+  assertPublicBaseUrlIfDigestEnabled(anyEnabled);
+
+  const run = async () => {
+    try {
+      await tick();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[digester] tick failure', e);
+    }
+  };
+  // initial run on boot so a missed digest_hour gets caught up
+  void run();
+  const interval = setInterval(run, config.digestTickIntervalSec * 1000);
+  // eslint-disable-next-line no-console
+  console.log(`[digester] running every ${config.digestTickIntervalSec}s`);
+  return () => clearInterval(interval);
 }
