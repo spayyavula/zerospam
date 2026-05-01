@@ -64,8 +64,18 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   app.get('/api/health', async () => ({ ok: true }));
 
   // ---- mailboxes ----
-  app.get('/api/mailboxes', async () => {
-    return db.prepare('SELECT * FROM mailboxes ORDER BY address').all();
+  function ownsMailbox(accountId: number, mailboxId: number): boolean {
+    const r = db
+      .prepare('SELECT 1 FROM mailboxes WHERE id = ? AND account_id = ?')
+      .get(mailboxId, accountId);
+    return !!r;
+  }
+
+  app.get('/api/mailboxes', async (req) => {
+    const accountId = (req as any).account?.id ?? 0;
+    return db
+      .prepare(`SELECT * FROM mailboxes WHERE account_id = ? ORDER BY address`)
+      .all(accountId);
   });
 
   const newMailboxSchema = z.object({
@@ -182,8 +192,12 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return { ok: true };
   });
 
-  app.get('/api/mailboxes/:id/counts', async (req) => {
+  app.get('/api/mailboxes/:id/counts', async (req, reply) => {
     const { id } = req.params as { id: string };
+    const accountId = (req as any).account?.id ?? 0;
+    if (!ownsMailbox(accountId, Number(id))) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const rows = db
       .prepare(
         `SELECT folder, COUNT(*) AS total, SUM(CASE WHEN read=0 THEN 1 ELSE 0 END) AS unread
@@ -213,8 +227,12 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     offset: z.coerce.number().min(0).default(0),
   });
 
-  app.get('/api/messages', async (req) => {
+  app.get('/api/messages', async (req, reply) => {
     const q = listQ.parse(req.query);
+    const accountId = (req as any).account?.id ?? 0;
+    if (!ownsMailbox(accountId, q.mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     return db
       .prepare(
         `SELECT id, mailbox_id, folder, from_address, from_name, to_addresses, subject, preview,
@@ -533,8 +551,12 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   // ---- whitelist ----
-  app.get('/api/whitelist', async (req) => {
+  app.get('/api/whitelist', async (req, reply) => {
     const { mailboxId } = z.object({ mailboxId: z.coerce.number() }).parse(req.query);
+    const accountId = (req as any).account?.id ?? 0;
+    if (!ownsMailbox(accountId, mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     return db
       .prepare('SELECT * FROM whitelist_rules WHERE mailbox_id = ? ORDER BY id')
       .all(mailboxId);
