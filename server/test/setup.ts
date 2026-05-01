@@ -1,7 +1,18 @@
-import { beforeEach, afterAll } from 'vitest';
+import { beforeEach, afterAll, vi } from 'vitest';
 import { db } from '../src/db.js';
 import { rmSync } from 'node:fs';
 import { config } from '../src/config.js';
+
+// Stub nodemailer so outbound delivery tests don't need a real SMTP server.
+// Resolves transport.sendMail() without touching the network; sendMessage()
+// still does its DB writes and trust-on-send whitelist work as in production.
+vi.mock('nodemailer', () => ({
+  default: {
+    createTransport: () => ({
+      sendMail: async () => ({ messageId: 'test', envelope: {}, response: 'ok' }),
+    }),
+  },
+}));
 
 // Keep this list in sync with the CREATE TABLE statements in db.ts.
 beforeEach(() => {

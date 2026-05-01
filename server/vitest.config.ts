@@ -10,7 +10,6 @@ export default defineConfig({
       PUBLIC_BASE_URL: 'http://localhost:8025',
       DIGEST_SIGNING_SECRET: 'test-digest-signing-secret-not-for-production-padded',
       DIGEST_TICK_INTERVAL_SEC: '60',
-      SEND_MODE: 'silent',
       API_PORT: '0',
       NODE_ENV: 'test',
     },

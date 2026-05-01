@@ -81,10 +81,6 @@ function preview(text: string | undefined): string {
 }
 
 function buildTransport() {
-  if (config.sendMode === 'silent') {
-    // Buffer the message in memory; never touch the network. Used in tests.
-    return nodemailer.createTransport({ streamTransport: true, buffer: true });
-  }
   if (config.sendMode === 'relay') {
     if (!config.relay.host) {
       throw new Error('SEND_MODE=relay but RELAY_HOST is empty');
