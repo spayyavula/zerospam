@@ -9,6 +9,7 @@ declare module 'fastify' {
     user?: { id: number };
     session?: { id: string };
     device?: { id: number };
+    account?: { id: number };
   }
 }
 
@@ -27,6 +28,10 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
       req.session = { id: v.sessionId };
       // Sliding window: refresh expiry on every authenticated request.
       touchSession(v.sessionId);
+      const userRow = db
+        .prepare('SELECT account_id FROM users WHERE id = ?')
+        .get(v.userId) as { account_id: number } | undefined;
+      if (userRow) req.account = { id: userRow.account_id };
       return;
     }
   }
@@ -45,6 +50,10 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
         req.user = { id: row.user_id };
         req.device = { id: row.id };
         db.prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?').run(Date.now(), row.id);
+        const userRow = db
+          .prepare('SELECT account_id FROM users WHERE id = ?')
+          .get(row.user_id) as { account_id: number } | undefined;
+        if (userRow) req.account = { id: userRow.account_id };
         return;
       }
     }
