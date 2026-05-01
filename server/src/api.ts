@@ -26,6 +26,22 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     },
     credentials: true,
   });
+
+  app.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string' },
+    (_req, body: string, done) => {
+      try {
+        const params = new URLSearchParams(body);
+        const out: Record<string, string> = {};
+        for (const [k, v] of params) out[k] = v;
+        done(null, out);
+      } catch (e) {
+        done(e as Error, undefined);
+      }
+    },
+  );
+
   await app.register(rateLimit, { global: false });
 
   // Public routes (no auth) — health check + login/logout
@@ -963,6 +979,73 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       .get(payload.mailboxId, payload.sender.toLowerCase()) as { c: number }).c;
     reply.type('text/html');
     return renderConfirmPage({ token: t, sender: payload.sender, quarantinedCount: count });
+  });
+
+  app.post('/public/digest/allow', async (req, reply) => {
+    const { renderSuccessPage, renderExpiredPage } = await import('./digest-pages.js');
+    const { verify } = await import('./digest-token.js');
+    const { loadDigestSigningSecret } = await import('./config.js');
+
+    const body = (req.body ?? {}) as { t?: string };
+    const t = body.t ?? '';
+    if (!t) return reply.code(400).send({ error: 'missing token' });
+
+    const payload = verify(t, loadDigestSigningSecret(), Date.now());
+    if (!payload) {
+      reply.type('text/html');
+      return renderExpiredPage();
+    }
+    const mb = db
+      .prepare('SELECT id FROM mailboxes WHERE id = ?')
+      .get(payload.mailboxId) as { id: number } | undefined;
+    if (!mb) {
+      reply.type('text/html');
+      return renderExpiredPage();
+    }
+
+    const sender = payload.sender.toLowerCase();
+    const ruleExists = db
+      .prepare(
+        'SELECT id FROM whitelist_rules WHERE mailbox_id = ? AND kind = ? AND pattern = ?',
+      )
+      .get(payload.mailboxId, 'address', sender) as { id: number } | undefined;
+    const alreadyTrusted = Boolean(ruleExists);
+
+    let movedIds: string[] = [];
+    runInTx(() => {
+      if (!ruleExists) {
+        db.prepare(
+          'INSERT INTO whitelist_rules (mailbox_id, kind, pattern, note, created_at) VALUES (?, ?, ?, ?, ?)',
+        ).run(payload.mailboxId, 'address', sender, 'digest:allow-forever', Date.now());
+      }
+      const toMove = db
+        .prepare(
+          "SELECT id FROM messages WHERE mailbox_id = ? AND folder = 'quarantine' AND from_address = ?",
+        )
+        .all(payload.mailboxId, sender) as { id: string }[];
+      movedIds = toMove.map((x) => x.id);
+      if (movedIds.length) {
+        db.prepare(
+          `UPDATE messages SET folder = 'inbox', expires_at = NULL
+            WHERE mailbox_id = ? AND folder = 'quarantine' AND from_address = ?`,
+        ).run(payload.mailboxId, sender);
+      }
+    });
+
+    if (!alreadyTrusted) {
+      bus.publish({ type: 'whitelist:changed', mailboxId: payload.mailboxId });
+    }
+    for (const mid of movedIds) {
+      bus.publish({ type: 'message:updated', mailboxId: payload.mailboxId, messageId: mid });
+    }
+
+    reply.type('text/html');
+    return renderSuccessPage({
+      sender: payload.sender,
+      movedCount: movedIds.length,
+      alreadyTrusted,
+      webmailUrl: config.publicBaseUrl,
+    });
   });
 
   // ---- SSE ----
