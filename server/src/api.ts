@@ -120,13 +120,18 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.patch('/api/mailboxes/:id', async (req, reply) => {
-    const { id } = req.params as { id: string };
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    if (!ownsMailbox(accountId, id)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const body = patchMailboxSchema.parse(req.body);
 
     // Validate cross-field constraints based on the post-merge state.
     const current = db
       .prepare('SELECT digest_enabled, digest_recipient_mode, owner_email FROM mailboxes WHERE id = ?')
-      .get(Number(id)) as
+      .get(id) as
       | { digest_enabled: number; digest_recipient_mode: 'external' | 'loopback'; owner_email: string | null }
       | undefined;
     if (!current) return reply.code(404).send({ error: 'mailbox not found' });
@@ -166,27 +171,32 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       values.push(body.ownerEmail);
     }
     if (!fields.length) return { ok: true };
-    values.push(Number(id));
+    values.push(id);
     db.prepare(`UPDATE mailboxes SET ${fields.join(', ')} WHERE id = ?`).run(...(values as any[]));
 
     if (nextEnabled && nextMode === 'loopback') {
       const { ensureDigestSelfWhitelist } = await import('./digester.js');
-      ensureDigestSelfWhitelist(Number(id));
+      ensureDigestSelfWhitelist(id);
     }
     return { ok: true };
   });
 
-  app.delete('/api/mailboxes/:id', async (req) => {
-    const { id } = req.params as { id: string };
+  app.delete('/api/mailboxes/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    if (!ownsMailbox(accountId, id)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const msgs = db
       .prepare('SELECT raw_path FROM messages WHERE mailbox_id = ?')
-      .all(Number(id)) as { raw_path: string }[];
+      .all(id) as { raw_path: string }[];
     const atts = db
       .prepare(
         'SELECT path FROM attachments WHERE message_id IN (SELECT id FROM messages WHERE mailbox_id = ?)',
       )
-      .all(Number(id)) as { path: string }[];
-    db.prepare('DELETE FROM mailboxes WHERE id = ?').run(Number(id));
+      .all(id) as { path: string }[];
+    db.prepare('DELETE FROM mailboxes WHERE id = ?').run(id);
     for (const m of msgs) deleteRaw(m.raw_path);
     for (const a of atts) deleteAttachmentFile(a.path);
     return { ok: true };
@@ -527,24 +537,29 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return { ok: true, affected: rows.length };
   });
 
-  app.post('/api/quarantine/:mailboxId/purge', async (req) => {
-    const { mailboxId } = req.params as { mailboxId: string };
+  app.post('/api/quarantine/:mailboxId/purge', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const mailboxId = Number((req.params as { mailboxId: string }).mailboxId);
+    if (!ownsMailbox(accountId, mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const rows = db
       .prepare("SELECT id, raw_path FROM messages WHERE mailbox_id = ? AND folder = 'quarantine'")
-      .all(Number(mailboxId)) as { id: string; raw_path: string }[];
+      .all(mailboxId) as { id: string; raw_path: string }[];
     const atts = db
       .prepare(
         "SELECT path FROM attachments WHERE message_id IN (SELECT id FROM messages WHERE mailbox_id = ? AND folder = 'quarantine')",
       )
-      .all(Number(mailboxId)) as { path: string }[];
+      .all(mailboxId) as { path: string }[];
     runInTx(() => {
       db.prepare("DELETE FROM messages WHERE mailbox_id = ? AND folder = 'quarantine'").run(
-        Number(mailboxId),
+        mailboxId,
       );
     });
     for (const r of rows) {
       deleteRaw(r.raw_path);
-      bus.publish({ type: 'message:deleted', mailboxId: Number(mailboxId), messageId: r.id });
+      bus.publish({ type: 'message:deleted', mailboxId, messageId: r.id });
     }
     for (const a of atts) deleteAttachmentFile(a.path);
     return { ok: true, purged: rows.length };

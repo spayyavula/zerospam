@@ -79,4 +79,63 @@ describe('account scoping', () => {
       await app.close();
     }
   });
+
+  it("PATCH /api/mailboxes/:id returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const before = db.prepare('SELECT display_name FROM mailboxes WHERE id = ?').get(mb2Id);
+      const r = await app.inject({
+        method: 'PATCH',
+        url: `/api/mailboxes/${mb2Id}`,
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { displayName: 'PWNED' },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT display_name FROM mailboxes WHERE id = ?').get(mb2Id);
+      expect(after).toEqual(before);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("DELETE /api/mailboxes/:id returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'DELETE',
+        url: `/api/mailboxes/${mb2Id}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const stillExists = db.prepare('SELECT id FROM mailboxes WHERE id = ?').get(mb2Id);
+      expect(stillExists).toBeTruthy();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/quarantine/:mailboxId/purge returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const before = db.prepare(
+        "SELECT COUNT(*) AS c FROM messages WHERE mailbox_id = ? AND folder = 'quarantine'"
+      ).get(mb2Id) as { c: number };
+      expect(before.c).toBeGreaterThan(0);
+      const r = await app.inject({
+        method: 'POST',
+        url: `/api/quarantine/${mb2Id}/purge`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare(
+        "SELECT COUNT(*) AS c FROM messages WHERE mailbox_id = ? AND folder = 'quarantine'"
+      ).get(mb2Id) as { c: number };
+      expect(after.c).toBe(before.c);
+    } finally {
+      await app.close();
+    }
+  });
 });
