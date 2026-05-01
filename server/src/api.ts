@@ -776,9 +776,9 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.post('/api/drafts', async (req, reply) => {
-    const b = draftIn.parse(req.body);
     const accountId = (req as any).account?.id;
     if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const b = draftIn.parse(req.body);
     if (!ownsMailbox(accountId, b.mailboxId)) {
       return reply.code(404).send({ error: 'mailbox not found' });
     }

@@ -22,22 +22,6 @@ const defaultDataDir = resolve(SERVER_ROOT, 'data');
 //   'relay'                       — uses an SMTP relay (RELAY_HOST/PORT/USER/PASS) for real delivery.
 const sendMode = (process.env.SEND_MODE ?? 'loopback') as 'loopback' | 'relay';
 
-// SESSION_SECRET is required ONLY in production. In dev and test we fall back to
-// a stable known value so `npm run dev`, `npm run seed:owner`, and the test suite
-// all work out-of-the-box. The fail-fast in production guards against accidentally
-// shipping with no secret configured.
-// @deprecated — kept for backward compat with existing tests. New code uses loadOrCreateSessionSecret.
-export function parseSessionSecret(input: { value: string | undefined; isProd: boolean }): string {
-  if (!input.value) {
-    if (!input.isProd) return 'a'.repeat(64);
-    throw new Error('Missing required env var: SESSION_SECRET');
-  }
-  if (input.value.length < 32) {
-    throw new Error('SESSION_SECRET must be at least 32 chars');
-  }
-  return input.value;
-}
-
 // In dev/test, persist a random secret to dataDir/.session-secret rather than
 // using a known constant. This means the dev secret is stable across restarts
 // (sessions survive server restarts) but unpredictable (no known default to exploit).
