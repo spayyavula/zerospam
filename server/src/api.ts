@@ -79,11 +79,32 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   const patchMailboxSchema = z.object({
     displayName: z.string().nullable().optional(),
     quarantineTtlHours: z.coerce.number().int().min(1).max(8760).optional(),
+    digestEnabled: z.boolean().optional(),
+    digestHour: z.coerce.number().int().min(0).max(23).optional(),
+    digestRecipientMode: z.enum(['external', 'loopback']).optional(),
+    ownerEmail: z.string().email().nullable().optional(),
   });
 
   app.patch('/api/mailboxes/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = patchMailboxSchema.parse(req.body);
+
+    // Validate cross-field constraints based on the post-merge state.
+    const current = db
+      .prepare('SELECT digest_enabled, digest_recipient_mode, owner_email FROM mailboxes WHERE id = ?')
+      .get(Number(id)) as
+      | { digest_enabled: number; digest_recipient_mode: 'external' | 'loopback'; owner_email: string | null }
+      | undefined;
+    if (!current) return reply.code(404).send({ error: 'mailbox not found' });
+
+    const nextEnabled = body.digestEnabled ?? Boolean(current.digest_enabled);
+    const nextMode = body.digestRecipientMode ?? current.digest_recipient_mode;
+    const nextOwner = body.ownerEmail !== undefined ? body.ownerEmail : current.owner_email;
+
+    if (nextEnabled && nextMode === 'external' && !nextOwner) {
+      return reply.code(400).send({ error: 'owner_email is required when external digest is enabled' });
+    }
+
     const fields: string[] = [];
     const values: unknown[] = [];
     if (body.displayName !== undefined) {
@@ -94,9 +115,30 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       fields.push('quarantine_ttl_hours = ?');
       values.push(body.quarantineTtlHours);
     }
+    if (body.digestEnabled !== undefined) {
+      fields.push('digest_enabled = ?');
+      values.push(body.digestEnabled ? 1 : 0);
+    }
+    if (body.digestHour !== undefined) {
+      fields.push('digest_hour = ?');
+      values.push(body.digestHour);
+    }
+    if (body.digestRecipientMode !== undefined) {
+      fields.push('digest_recipient_mode = ?');
+      values.push(body.digestRecipientMode);
+    }
+    if (body.ownerEmail !== undefined) {
+      fields.push('owner_email = ?');
+      values.push(body.ownerEmail);
+    }
     if (!fields.length) return { ok: true };
     values.push(Number(id));
     db.prepare(`UPDATE mailboxes SET ${fields.join(', ')} WHERE id = ?`).run(...(values as any[]));
+
+    if (nextEnabled && nextMode === 'loopback') {
+      const { ensureDigestSelfWhitelist } = await import('./digester.js');
+      ensureDigestSelfWhitelist(Number(id));
+    }
     return { ok: true };
   });
 

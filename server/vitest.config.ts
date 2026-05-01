@@ -11,6 +11,7 @@ export default defineConfig({
       DIGEST_SIGNING_SECRET: 'test-digest-signing-secret-not-for-production-padded',
       DIGEST_TICK_INTERVAL_SEC: '60',
       SEND_MODE: 'silent',
+      API_PORT: '0',
       NODE_ENV: 'test',
     },
     maxWorkers: 1,
