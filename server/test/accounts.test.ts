@@ -104,10 +104,26 @@ describe('accounts helpers', () => {
     expect(got?.name).toBe('lookup');
   });
 
+  it('getAccountById returns null for a non-existent id', () => {
+    expect(getAccountById(999_999)).toBeNull();
+  });
+
   it('ensureDefaultAccount is idempotent', () => {
     ensureDefaultAccount();
     ensureDefaultAccount();
     const rows = db.prepare('SELECT COUNT(*) AS c FROM accounts WHERE id = 1').get() as { c: number };
     expect(rows.c).toBe(1);
+  });
+
+  it('ensureDefaultAccount inserts when the row is absent', () => {
+    db.prepare('DELETE FROM accounts WHERE id = ?').run(DEFAULT_ACCOUNT_ID);
+    expect(db.prepare('SELECT id FROM accounts WHERE id = ?').get(DEFAULT_ACCOUNT_ID)).toBeUndefined();
+    ensureDefaultAccount();
+    const row = db
+      .prepare('SELECT id, name, plan FROM accounts WHERE id = ?')
+      .get(DEFAULT_ACCOUNT_ID) as { id: number; name: string; plan: string };
+    expect(row.id).toBe(DEFAULT_ACCOUNT_ID);
+    expect(row.name).toBe(DEFAULT_ACCOUNT_NAME);
+    expect(row.plan).toBe('free');
   });
 });

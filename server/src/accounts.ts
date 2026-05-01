@@ -1,11 +1,11 @@
 import { db, DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME, type Account } from './db.js';
 
 export function ensureDefaultAccount(): void {
-  const row = db.prepare(`SELECT id FROM accounts WHERE id = ${DEFAULT_ACCOUNT_ID}`).get();
+  const row = db.prepare('SELECT id FROM accounts WHERE id = ?').get(DEFAULT_ACCOUNT_ID);
   if (row) return;
   db.prepare(
-    `INSERT INTO accounts (id, name, plan, created_at) VALUES (${DEFAULT_ACCOUNT_ID}, '${DEFAULT_ACCOUNT_NAME}', 'free', ?)`,
-  ).run(Date.now());
+    'INSERT INTO accounts (id, name, plan, created_at) VALUES (?, ?, ?, ?)',
+  ).run(DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME, 'free', Date.now());
 }
 
 export function createAccount(name: string, plan = 'free'): Account {
