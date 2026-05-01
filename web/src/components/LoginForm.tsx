@@ -3,7 +3,11 @@ import { api } from '../api';
 import { Shield } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
-export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+type LoginFormProps = {
+  onSuccess: () => void;
+  onSwitchToSignup?: () => void;
+};
+export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totp, setTotp] = useState('');
@@ -121,6 +125,11 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           >
             {busy ? 'Signing in…' : needsTotp ? 'Verify' : 'Sign in'}
           </button>
+          {onSwitchToSignup && (
+            <button type="button" onClick={onSwitchToSignup} className="w-full text-xs text-zsmuted mt-2">
+              Need an account? Sign up
+            </button>
+          )}
         </form>
 
         <p className="text-center text-[12px] text-zsmuted/70 mt-8 select-none">

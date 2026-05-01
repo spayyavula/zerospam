@@ -23,6 +23,7 @@ import HelpModal from './components/HelpModal';
 import AliasManager from './components/AliasManager';
 import ProbationaryWall from './components/ProbationaryWall';
 import LoginForm from './components/LoginForm';
+import Signup from './components/Signup';
 import TotpSetupModal from './components/TotpSetupModal';
 import ThemeToggle from './components/ThemeToggle';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -83,6 +84,7 @@ export default function App() {
   const [filter, setFilter] = useState<ListFilter>('all');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null); // null = checking
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
 
   // auth check — runs first so we know whether to show the login gate
   useEffect(() => {
@@ -311,7 +313,13 @@ export default function App() {
   });
 
   if (authed === null) return null;
-  if (!authed) return <LoginForm onSuccess={() => setAuthed(true)} />;
+  if (!authed) {
+    return authView === 'login' ? (
+      <LoginForm onSuccess={() => setAuthed(true)} onSwitchToSignup={() => setAuthView('signup')} />
+    ) : (
+      <Signup onSwitchToLogin={() => setAuthView('login')} />
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">

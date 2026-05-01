@@ -191,6 +191,11 @@ export const api = {
     j(`/api/inject`, { method: 'POST', body: JSON.stringify(body) }),
 
   // auth
+  signup: (b: { email: string; password: string; username: string }) =>
+    j<{ userId: number; accountId: number }>('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(b),
+    }),
   authMe: () => j<{ user: { id: number; email: string; totp_enabled: boolean } }>('/api/auth/me'),
   authLogin: (b: { email: string; password: string; totp?: string }) =>
     j<{ ok: true } | { needs_totp: true }>('/api/auth/login', {
