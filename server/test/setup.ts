@@ -1,5 +1,5 @@
 import { beforeEach, afterAll, vi } from 'vitest';
-import { db, DEFAULT_ACCOUNT_ID } from '../src/db.js';
+import { db, DEFAULT_ACCOUNT_ID, SYSTEM_ACCOUNT_ID } from '../src/db.js';
 import { rmSync } from 'node:fs';
 import { config } from '../src/config.js';
 
@@ -31,7 +31,7 @@ beforeEach(() => {
     DELETE FROM devices;
     DELETE FROM sessions;
     DELETE FROM users;
-    DELETE FROM accounts WHERE id != ${DEFAULT_ACCOUNT_ID};
+    DELETE FROM accounts WHERE id NOT IN (${DEFAULT_ACCOUNT_ID}, ${SYSTEM_ACCOUNT_ID});
     DELETE FROM digest_tokens_used;
   `);
 });

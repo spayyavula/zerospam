@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getOrCreateSystemMailboxId } from '../src/system-mailbox.js';
-import { db, DEFAULT_ACCOUNT_ID } from '../src/db.js';
+import { db, SYSTEM_ACCOUNT_ID } from '../src/db.js';
 import { config } from '../src/config.js';
 
 describe('system mailbox', () => {
@@ -10,7 +10,7 @@ describe('system mailbox', () => {
       | { address: string; account_id: number }
       | undefined;
     expect(row?.address).toBe(`noreply@${config.signupDomain}`);
-    expect(row?.account_id).toBe(DEFAULT_ACCOUNT_ID);
+    expect(row?.account_id).toBe(SYSTEM_ACCOUNT_ID);
   });
 
   it('returns the same id on subsequent calls (idempotent)', () => {

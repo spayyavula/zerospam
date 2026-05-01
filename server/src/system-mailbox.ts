@@ -1,4 +1,4 @@
-import { db, DEFAULT_ACCOUNT_ID } from './db.js';
+import { db, SYSTEM_ACCOUNT_ID } from './db.js';
 import { config } from './config.js';
 import { ensureDkim } from './dkim.js';
 
@@ -8,7 +8,7 @@ const SYSTEM_LOCAL_PART = 'noreply';
  * Returns the mailbox id of the noreply@<signupDomain> system mailbox,
  * creating it (and its parent domain row + DKIM key) if needed.
  *
- * Owned by DEFAULT_ACCOUNT_ID. Used to send verification emails so the
+ * Owned by SYSTEM_ACCOUNT_ID. Used to send verification emails so the
  * token never lands in a user's own sent folder.
  *
  * Idempotent and tolerant of per-test cleanup (which wipes mailboxes).
@@ -30,7 +30,7 @@ export function getOrCreateSystemMailboxId(): number {
         `INSERT INTO domains (name, created_at, account_id)
          VALUES (?, ?, ?) RETURNING id`,
       )
-      .get(config.signupDomain, Date.now(), DEFAULT_ACCOUNT_ID) as { id: number };
+      .get(config.signupDomain, Date.now(), SYSTEM_ACCOUNT_ID) as { id: number };
   }
   ensureDkim(domainRow.id);
 
@@ -47,7 +47,7 @@ export function getOrCreateSystemMailboxId(): number {
       domainRow.id,
       'ZeroSpam noreply',
       config.quarantineTtlHours,
-      DEFAULT_ACCOUNT_ID,
+      SYSTEM_ACCOUNT_ID,
       Date.now(),
     ) as { id: number };
   return row.id;

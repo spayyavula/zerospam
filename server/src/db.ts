@@ -3,6 +3,8 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
 
+export const SYSTEM_ACCOUNT_ID = 0;
+export const SYSTEM_ACCOUNT_NAME = 'system';
 export const DEFAULT_ACCOUNT_ID = 1;
 export const DEFAULT_ACCOUNT_NAME = 'default';
 
@@ -272,6 +274,16 @@ if (!domainCols.has('dkim_private_pem')) {
 }
 if (!domainCols.has('dkim_public_pem')) {
   db.exec('ALTER TABLE domains ADD COLUMN dkim_public_pem TEXT');
+}
+
+// Seed the system account FIRST (id=0, reserved for the noreply mailbox).
+// Must exist before any FK reference resolves to it.
+const systemAccount = db
+  .prepare('SELECT id FROM accounts WHERE id = ?')
+  .get(SYSTEM_ACCOUNT_ID) as { id: number } | undefined;
+if (!systemAccount) {
+  db.prepare('INSERT INTO accounts (id, name, plan, created_at) VALUES (?, ?, ?, ?)')
+    .run(SYSTEM_ACCOUNT_ID, SYSTEM_ACCOUNT_NAME, 'system', Date.now());
 }
 
 // Seed default account BEFORE account_id migrations so the FK DEFAULT 1
