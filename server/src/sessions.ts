@@ -13,6 +13,7 @@ export type SessionValidation = {
   sessionId: string;
   userId: number;
   expiresAt: number;
+  accountId: number;
 };
 
 function hmac(secret: string, data: string): string {
@@ -42,11 +43,16 @@ export function validateCookie(cookieValue: string, secret: string): SessionVali
   const expected = hmac(secret, sessionId);
   if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) return null;
   const row = db
-    .prepare('SELECT user_id, expires_at FROM sessions WHERE id = ?')
-    .get(sessionId) as { user_id: number; expires_at: number } | undefined;
+    .prepare(
+      `SELECT s.user_id, s.expires_at, u.account_id
+       FROM sessions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.id = ?`,
+    )
+    .get(sessionId) as { user_id: number; expires_at: number; account_id: number } | undefined;
   if (!row) return null;
   if (row.expires_at < Date.now()) return null;
-  return { sessionId, userId: row.user_id, expiresAt: row.expires_at };
+  return { sessionId, userId: row.user_id, expiresAt: row.expires_at, accountId: row.account_id };
 }
 
 export function destroySession(sessionId: string): void {
