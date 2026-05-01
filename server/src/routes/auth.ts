@@ -49,6 +49,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return;
     }
 
+    if (!user.email_verified_at) {
+      recordAudit({ event: 'login.fail', userId: user.id, detail: { reason: 'email-not-verified' }, ip, userAgent: ua });
+      reply.code(403).send({ error: 'email not verified' });
+      return;
+    }
+
     if (user.totp_enabled_at) {
       if (!totp) {
         return { needs_totp: true };

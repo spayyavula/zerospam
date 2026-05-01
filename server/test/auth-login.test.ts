@@ -109,3 +109,17 @@ describe('login + TOTP', () => {
     expect(r.statusCode).toBe(401);
   });
 });
+
+describe('login is blocked until verified', () => {
+  it('rejects with email-not-verified error for an unverified user', async () => {
+    const { email, password } = await seedOwner({ email: 'pending@example.com', verified: false });
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      headers: { 'content-type': 'application/json' },
+      payload: { email, password },
+    });
+    expect(r.statusCode).toBe(403);
+    expect(r.json().error).toMatch(/verif/i);
+  });
+});
