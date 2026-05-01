@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { db, DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME } from '../src/db.js';
+import { createAccount, getAccountById, ensureDefaultAccount } from '../src/accounts.js';
 
 describe('accounts schema', () => {
   it('accounts table has the required columns', () => {
@@ -86,5 +87,27 @@ describe('accounts schema', () => {
         ).run(Date.now());
       }
     }).not.toThrow();
+  });
+});
+
+describe('accounts helpers', () => {
+  it('createAccount returns a row with the new id', () => {
+    const a = createAccount('test-tenant');
+    expect(a.id).toBeGreaterThan(1);
+    expect(a.name).toBe('test-tenant');
+    expect(a.plan).toBe('free');
+  });
+
+  it('getAccountById returns the account', () => {
+    const a = createAccount('lookup');
+    const got = getAccountById(a.id);
+    expect(got?.name).toBe('lookup');
+  });
+
+  it('ensureDefaultAccount is idempotent', () => {
+    ensureDefaultAccount();
+    ensureDefaultAccount();
+    const rows = db.prepare('SELECT COUNT(*) AS c FROM accounts WHERE id = 1').get() as { c: number };
+    expect(rows.c).toBe(1);
   });
 });
