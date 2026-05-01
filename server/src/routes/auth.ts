@@ -53,7 +53,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       if (!totp) {
         return { needs_totp: true };
       }
-      if (!verifyTotp(user.totp_secret, totp)) {
+      if (!user.totp_secret || !verifyTotp(user.totp_secret, totp)) {
         recordAudit({ event: 'totp.fail', userId: user.id, ip, userAgent: ua });
         reply.code(401).send({ error: 'invalid-credentials' });
         return;
