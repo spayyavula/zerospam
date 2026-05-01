@@ -14,10 +14,33 @@ import {
 } from './digest-template.js';
 import { config, loadDigestSigningSecret } from './config.js';
 import { sendMessage } from './sender.js';
+import { ingest } from './ingest.js';
 
 const MAX_SENDERS_PER_DIGEST = 30;
 
 const findMailbox = db.prepare('SELECT * FROM mailboxes WHERE id = ?');
+
+const ruleExists = db.prepare(
+  'SELECT id FROM whitelist_rules WHERE mailbox_id = ? AND kind = ? AND pattern = ?',
+);
+const insertRule = db.prepare(
+  'INSERT INTO whitelist_rules (mailbox_id, kind, pattern, note, created_at) VALUES (?, ?, ?, ?, ?)',
+);
+
+function digestSystemAddress(mailboxAddress: string): string {
+  const domain = mailboxAddress.split('@')[1];
+  return `digest-system@${domain}`;
+}
+
+export function ensureDigestSelfWhitelist(mailboxId: number): void {
+  const mb = findMailbox.get(mailboxId) as Mailbox | undefined;
+  if (!mb) return;
+  const pattern = digestSystemAddress(mb.address);
+  const existing = ruleExists.get(mailboxId, 'address', pattern);
+  if (!existing) {
+    insertRule.run(mailboxId, 'address', pattern, 'self:digest', Date.now());
+  }
+}
 
 export async function assembleDigest(mailboxId: number): Promise<DigestContent | null> {
   const mb = findMailbox.get(mailboxId) as Mailbox | undefined;
@@ -118,6 +141,32 @@ export async function sendDigest(
     return { delivered: true, recipientMode: 'external' };
   }
 
-  // loopback path is added in Task 6
-  throw new Error(`unknown digest_recipient_mode: ${mb.digest_recipient_mode}`);
+  // Loopback: synthesize a multipart RFC 822 buffer and run it through ingest()
+  // exactly like the test injector does. The digest-system@<domain> sender is
+  // pre-whitelisted via ensureDigestSelfWhitelist, so the digest itself does
+  // not land in quarantine.
+  const fromAddr = digestSystemAddress(mb.address);
+  const boundary = `bndry-${Math.random().toString(36).slice(2)}`;
+  const headers = [
+    `From: ZeroSpam Digest <${fromAddr}>`,
+    `To: ${mb.address}`,
+    `Subject: ${subject}`,
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: <${Date.now()}.${Math.random().toString(36).slice(2)}@${mb.address.split('@')[1]}>`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    ``,
+    text,
+    `--${boundary}`,
+    `Content-Type: text/html; charset=utf-8`,
+    ``,
+    html,
+    `--${boundary}--`,
+  ];
+  const raw = Buffer.from(headers.join('\r\n'));
+  await ingest(raw, mb.address);
+  return { delivered: true, recipientMode: 'loopback' };
 }
