@@ -13,16 +13,22 @@ export async function verifyPassword(hash: string, plain: string): Promise<boole
   }
 }
 
-export type CreateOwnerInput = { email: string; password: string };
+export type CreateOwnerInput = { email: string; password: string; verified?: boolean };
 
 export async function createOwner(input: CreateOwnerInput): Promise<number> {
   const hash = await hashPassword(input.password);
-  const r = db
+  const row = db
     .prepare(
-      `INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?) RETURNING id`,
+      `INSERT INTO users (email, password_hash, account_id, email_verified_at, created_at)
+       VALUES (?, ?, 1, ?, ?) RETURNING id`,
     )
-    .get(input.email.toLowerCase(), hash, Date.now()) as { id: number };
-  return r.id;
+    .get(
+      input.email.toLowerCase(),
+      hash,
+      input.verified === false ? null : Date.now(),
+      Date.now(),
+    ) as { id: number };
+  return row.id;
 }
 
 export function getOwnerByEmail(email: string): User | undefined {

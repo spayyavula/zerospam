@@ -69,7 +69,7 @@ export async function runSeedOwner(opts: SeedOwnerOpts): Promise<void> {
   }
   const password = flags.password ?? (await promptHidden('Owner password (>=12 chars): '));
   if (password.length < 12) throw new Error('password must be >= 12 chars');
-  const id = await createOwner({ email, password });
+  const id = await createOwner({ email, password, verified: true });
   // eslint-disable-next-line no-console
   console.log(`✓ owner created: ${email} (id=${id})`);
 }
