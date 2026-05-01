@@ -269,14 +269,17 @@ if (!domainCols.has('dkim_public_pem')) {
 // Seed default account BEFORE account_id migrations so the FK DEFAULT 1
 // reference resolves for any rows that exist when the column is added.
 const defaultAccount = db
-  .prepare(`SELECT id FROM accounts WHERE id = ${DEFAULT_ACCOUNT_ID}`)
-  .get() as { id: number } | undefined;
+  .prepare('SELECT id FROM accounts WHERE id = ?')
+  .get(DEFAULT_ACCOUNT_ID) as { id: number } | undefined;
 if (!defaultAccount) {
   db.prepare(
-    `INSERT INTO accounts (id, name, plan, created_at) VALUES (${DEFAULT_ACCOUNT_ID}, '${DEFAULT_ACCOUNT_NAME}', 'free', ?)`,
-  ).run(Date.now());
+    'INSERT INTO accounts (id, name, plan, created_at) VALUES (?, ?, ?, ?)',
+  ).run(DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME, 'free', Date.now());
 }
 
+// SQLite ALTER TABLE does NOT accept bound parameters, so DEFAULT-clause
+// values for the new account_id column must be interpolated. The values are
+// module-level constants (no untrusted input), so injection is impossible.
 const userCols = colsOf('users');
 if (!userCols.has('account_id')) {
   db.exec(
@@ -306,15 +309,9 @@ if (!domainCols2.has('account_id')) {
 
 // Backfill any rows that predated the account_id column (already-existing DBs
 // where the ALTER TABLE ran before the seed — belt-and-suspenders).
-db.exec(
-  `UPDATE users     SET account_id = ${DEFAULT_ACCOUNT_ID} WHERE account_id IS NULL`,
-);
-db.exec(
-  `UPDATE mailboxes SET account_id = ${DEFAULT_ACCOUNT_ID} WHERE account_id IS NULL`,
-);
-db.exec(
-  `UPDATE domains   SET account_id = ${DEFAULT_ACCOUNT_ID} WHERE account_id IS NULL`,
-);
+db.prepare('UPDATE users     SET account_id = ? WHERE account_id IS NULL').run(DEFAULT_ACCOUNT_ID);
+db.prepare('UPDATE mailboxes SET account_id = ? WHERE account_id IS NULL').run(DEFAULT_ACCOUNT_ID);
+db.prepare('UPDATE domains   SET account_id = ? WHERE account_id IS NULL').run(DEFAULT_ACCOUNT_ID);
 // Grandfather pre-feature users as verified — they predate the verification
 // gate and locking them out on next login would be a regression.
 db.exec(`UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
