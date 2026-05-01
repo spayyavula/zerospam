@@ -9,8 +9,11 @@ import { sign as signToken, type DigestTokenPayload } from './digest-token.js';
 import {
   type DigestContent,
   type DigestSenderRow,
+  renderHtml,
+  renderText,
 } from './digest-template.js';
 import { config, loadDigestSigningSecret } from './config.js';
+import { sendMessage } from './sender.js';
 
 const MAX_SENDERS_PER_DIGEST = 30;
 
@@ -80,4 +83,41 @@ export async function assembleDigest(mailboxId: number): Promise<DigestContent |
     totalSendersInQuarantine: rows.length,
     windowStart: cutoff,
   };
+}
+
+export type SendDigestResult = {
+  delivered: boolean;
+  recipientMode: 'external' | 'loopback';
+};
+
+export async function sendDigest(
+  mailboxId: number,
+  content: DigestContent,
+): Promise<SendDigestResult> {
+  const mb = findMailbox.get(mailboxId) as Mailbox | undefined;
+  if (!mb) throw new Error(`mailbox ${mailboxId} not found`);
+  if (!config.publicBaseUrl) {
+    throw new Error('PUBLIC_BASE_URL is unset; cannot build digest action URLs');
+  }
+
+  const subject = `ZeroSpam quarantine digest — ${content.rows.length} sender${content.rows.length === 1 ? '' : 's'} waiting`;
+  const html = renderHtml(content, config.publicBaseUrl);
+  const text = renderText(content, config.publicBaseUrl);
+
+  if (mb.digest_recipient_mode === 'external') {
+    if (!mb.owner_email) {
+      throw new Error(`mailbox ${mailboxId} has external digest mode but no owner_email`);
+    }
+    await sendMessage({
+      mailboxId,
+      to: [mb.owner_email],
+      subject,
+      text,
+      html,
+    });
+    return { delivered: true, recipientMode: 'external' };
+  }
+
+  // loopback path is added in Task 6
+  throw new Error(`unknown digest_recipient_mode: ${mb.digest_recipient_mode}`);
 }

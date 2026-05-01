@@ -20,7 +20,9 @@ const defaultDataDir = resolve(SERVER_ROOT, 'data');
 //   'loopback' (default, for dev) — submits sent mail back to our own SMTP on localhost,
 //                                   so messages to local mailboxes round-trip through ingest.
 //   'relay'                       — uses an SMTP relay (RELAY_HOST/PORT/USER/PASS) for real delivery.
-const sendMode = (process.env.SEND_MODE ?? 'loopback') as 'loopback' | 'relay';
+// 'silent' uses an in-memory stream transport — no network. Used in tests so
+// outbound flows can be exercised without a real SMTP server.
+const sendMode = (process.env.SEND_MODE ?? 'loopback') as 'loopback' | 'relay' | 'silent';
 
 // SESSION_SECRET is required ONLY in production. In dev and test we fall back to
 // a stable known value so `npm run dev`, `npm run seed:owner`, and the test suite
