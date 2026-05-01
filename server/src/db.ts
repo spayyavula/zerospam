@@ -184,6 +184,13 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_event ON audit_log(event, at DESC);
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id          INTEGER PRIMARY KEY,
+  name        TEXT NOT NULL,
+  plan        TEXT NOT NULL DEFAULT 'free',
+  created_at  INTEGER NOT NULL
+);
 `;
 
 db.exec(SCHEMA);
@@ -247,6 +254,39 @@ if (!domainCols.has('dkim_public_pem')) {
   db.exec('ALTER TABLE domains ADD COLUMN dkim_public_pem TEXT');
 }
 
+const userCols = colsOf('users');
+if (!userCols.has('account_id')) {
+  db.exec('ALTER TABLE users ADD COLUMN account_id INTEGER');
+}
+if (!userCols.has('email_verified_at')) {
+  db.exec('ALTER TABLE users ADD COLUMN email_verified_at INTEGER');
+}
+const mailboxCols2 = colsOf('mailboxes');
+if (!mailboxCols2.has('account_id')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN account_id INTEGER');
+}
+if (!mailboxCols2.has('provider')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN provider TEXT');
+}
+const domainCols2 = colsOf('domains');
+if (!domainCols2.has('account_id')) {
+  db.exec('ALTER TABLE domains ADD COLUMN account_id INTEGER');
+}
+
+// Seed default account and backfill account_id on existing rows.
+const defaultAccount = db.prepare('SELECT id FROM accounts WHERE id = 1').get() as
+  | { id: number }
+  | undefined;
+if (!defaultAccount) {
+  db.prepare(
+    `INSERT INTO accounts (id, name, plan, created_at) VALUES (1, 'default', 'free', ?)`,
+  ).run(Date.now());
+}
+db.exec(`UPDATE users      SET account_id = 1 WHERE account_id IS NULL`);
+db.exec(`UPDATE mailboxes  SET account_id = 1 WHERE account_id IS NULL`);
+db.exec(`UPDATE domains    SET account_id = 1 WHERE account_id IS NULL`);
+db.exec(`UPDATE users      SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
+
 // One-time backfill of attachment_count and FTS for messages predating this schema.
 // Idempotent — if the rows already exist, INSERT OR IGNORE skips them.
 try {
@@ -298,6 +338,13 @@ export function runInTx<T>(fn: () => T): T {
   }
 }
 
+export type Account = {
+  id: number;
+  name: string;
+  plan: string;
+  created_at: number;
+};
+
 export type Domain = {
   id: number;
   name: string;
@@ -305,6 +352,7 @@ export type Domain = {
   dkim_selector: string | null;
   dkim_private_pem: string | null;
   dkim_public_pem: string | null;
+  account_id: number;
 };
 
 export type Mailbox = {
@@ -321,6 +369,8 @@ export type Mailbox = {
   last_digest_sent_at: number | null;
   digest_last_error: string | null;
   digest_consecutive_failures: number;
+  account_id: number;
+  provider: 'gmail' | 'outlook' | null;
 };
 
 export type WhitelistRule = {
@@ -406,6 +456,8 @@ export type User = {
   password_hash: string;
   totp_secret: string | null;
   totp_enabled_at: number | null;
+  account_id: number;
+  email_verified_at: number | null;
   created_at: number;
 };
 

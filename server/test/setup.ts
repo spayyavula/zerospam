@@ -31,6 +31,7 @@ beforeEach(() => {
     DELETE FROM devices;
     DELETE FROM sessions;
     DELETE FROM users;
+    DELETE FROM accounts WHERE id != 1;
   `);
 });
 
