@@ -11,6 +11,15 @@ mkdirSync(config.dataDir, { recursive: true });
 export const db = new DatabaseSync(join(config.dataDir, 'zerospam.sqlite'));
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
+// Foreign-key enforcement is per-connection in SQLite. The multi-tenant boundary
+// relies on FK CASCADE/RESTRICT semantics (e.g. deleting a user cascades to sessions,
+// devices, mailboxes). If the pragma silently fails (SQLite compiled without FK support,
+// or a future code path forgets to enable it), the failure must be loud and immediate.
+// Testing this assertion path is impractical at module level, so we fail-fast here.
+const fk = db.prepare('PRAGMA foreign_keys').get() as { foreign_keys: number };
+if (fk.foreign_keys !== 1) {
+  throw new Error('PRAGMA foreign_keys is not enforced — refusing to start');
+}
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS domains (

@@ -126,7 +126,9 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({ userId, accountId });
   });
 
-  app.get('/auth/verify', async (req, reply) => {
+  app.get('/auth/verify', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const t = (req.query as { t?: string }).t ?? '';
     try {
       const payload = verifyVerifyToken(t, config.sessionSecret, Date.now());

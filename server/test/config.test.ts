@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseSessionSecret, parseAllowedOrigins } from '../src/config.js';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import { parseSessionSecret, parseAllowedOrigins, loadOrCreateSessionSecret } from '../src/config.js';
 
 describe('config parsers', () => {
   it('parseSessionSecret throws when missing in production', () => {
@@ -19,5 +22,36 @@ describe('config parsers', () => {
   });
   it('parseAllowedOrigins falls back when empty', () => {
     expect(parseAllowedOrigins(undefined)).toEqual(['http://localhost:5173']);
+  });
+});
+
+describe('loadOrCreateSessionSecret', () => {
+  it('persists across calls in dev (same secret returned on second call)', () => {
+    const tmpDir = path.join(os.tmpdir(), 'zerospam-test-' + Math.random().toString(36).slice(2));
+    fs.mkdirSync(tmpDir, { recursive: true });
+    try {
+      const a = loadOrCreateSessionSecret({ value: undefined, isProd: false, dataDir: tmpDir });
+      const b = loadOrCreateSessionSecret({ value: undefined, isProd: false, dataDir: tmpDir });
+      expect(a).toBe(b);
+      expect(a.length).toBeGreaterThanOrEqual(32);
+      expect(a).not.toBe('a'.repeat(64));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('throws in prod with no value', () => {
+    expect(() =>
+      loadOrCreateSessionSecret({ value: undefined, isProd: true, dataDir: '/tmp' }),
+    ).toThrow(/SESSION_SECRET/);
+  });
+
+  it('accepts env-provided value when >= 32 chars', () => {
+    const v = loadOrCreateSessionSecret({
+      value: 'a-secret-with-at-least-32-characters-here',
+      isProd: true,
+      dataDir: '/tmp',
+    });
+    expect(v).toBe('a-secret-with-at-least-32-characters-here');
   });
 });

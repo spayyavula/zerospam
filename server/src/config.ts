@@ -26,6 +26,7 @@ const sendMode = (process.env.SEND_MODE ?? 'loopback') as 'loopback' | 'relay';
 // a stable known value so `npm run dev`, `npm run seed:owner`, and the test suite
 // all work out-of-the-box. The fail-fast in production guards against accidentally
 // shipping with no secret configured.
+// @deprecated — kept for backward compat with existing tests. New code uses loadOrCreateSessionSecret.
 export function parseSessionSecret(input: { value: string | undefined; isProd: boolean }): string {
   if (!input.value) {
     if (!input.isProd) return 'a'.repeat(64);
@@ -35,6 +36,35 @@ export function parseSessionSecret(input: { value: string | undefined; isProd: b
     throw new Error('SESSION_SECRET must be at least 32 chars');
   }
   return input.value;
+}
+
+// In dev/test, persist a random secret to dataDir/.session-secret rather than
+// using a known constant. This means the dev secret is stable across restarts
+// (sessions survive server restarts) but unpredictable (no known default to exploit).
+export function loadOrCreateSessionSecret(input: { value: string | undefined; isProd: boolean; dataDir: string }): string {
+  if (input.value) {
+    if (input.value.length < 32) {
+      throw new Error('SESSION_SECRET must be at least 32 chars');
+    }
+    return input.value;
+  }
+  if (input.isProd) {
+    throw new Error('Missing required env var: SESSION_SECRET');
+  }
+  // Dev/test: persist a random secret to dataDir/.session-secret
+  mkdirSync(input.dataDir, { recursive: true });
+  const path = join(input.dataDir, '.session-secret');
+  if (existsSync(path)) {
+    const persisted = readFileSync(path, 'utf8').trim();
+    if (persisted.length >= 32) return persisted;
+  }
+  const secret = randomBytes(32)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  writeFileSync(path, secret, { mode: 0o600 });
+  return secret;
 }
 
 export function parseAllowedOrigins(raw: string | undefined): string[] {
@@ -60,9 +90,10 @@ export const config = {
   dkim: {
     selector: process.env.DKIM_SELECTOR ?? 'zs1',
   },
-  sessionSecret: parseSessionSecret({
+  sessionSecret: loadOrCreateSessionSecret({
     value: process.env.SESSION_SECRET,
     isProd: process.env.NODE_ENV === 'production',
+    dataDir: process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : defaultDataDir,
   }),
   allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
