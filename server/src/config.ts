@@ -1,5 +1,7 @@
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 
 function envInt(name: string, fallback: number): number {
   const v = process.env[name];
@@ -66,6 +68,37 @@ export const config = {
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
   rateLimitAuthPerMin: envInt('RATE_LIMIT_AUTH_PER_MIN', 30),
   isProd: process.env.NODE_ENV === 'production',
+  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? '',
+  digestTickIntervalSec: envInt('DIGEST_TICK_INTERVAL_SEC', 60),
 } as const;
 
 export type Config = typeof config;
+
+// Lazy-loaded so tests can mutate process.env between calls.
+export function loadDigestSigningSecret(): string {
+  const fromEnv = process.env.DIGEST_SIGNING_SECRET;
+  if (fromEnv && fromEnv.length > 0) return fromEnv;
+
+  mkdirSync(config.dataDir, { recursive: true });
+  const path = join(config.dataDir, '.digest-secret');
+  if (existsSync(path)) {
+    const persisted = readFileSync(path, 'utf8').trim();
+    if (persisted.length > 0) return persisted;
+  }
+
+  const secret = randomBytes(32)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  writeFileSync(path, secret, { mode: 0o600 });
+  return secret;
+}
+
+export function assertPublicBaseUrlIfDigestEnabled(anyMailboxHasDigest: boolean): void {
+  if (anyMailboxHasDigest && !config.publicBaseUrl) {
+    throw new Error(
+      'PUBLIC_BASE_URL is unset but at least one mailbox has digest_enabled=1. Set PUBLIC_BASE_URL in env.',
+    );
+  }
+}

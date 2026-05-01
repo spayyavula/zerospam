@@ -28,8 +28,10 @@ export function seedMailbox(address: string, opts: SeedMailboxOpts = {}): number
   if (!domain) domain = { id: seedDomain(domainName) };
   const r = db
     .prepare(
-      `INSERT INTO mailboxes (address, domain_id, display_name, quarantine_ttl_hours, created_at)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO mailboxes (address, domain_id, display_name, quarantine_ttl_hours, created_at,
+                              digest_enabled, digest_hour, digest_recipient_mode, owner_email,
+                              last_digest_sent_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .get(
       address.toLowerCase(),
@@ -37,6 +39,11 @@ export function seedMailbox(address: string, opts: SeedMailboxOpts = {}): number
       opts.displayName ?? null,
       opts.quarantineTtlHours ?? 168,
       Date.now(),
+      opts.digestEnabled ? 1 : 0,
+      opts.digestHour ?? 8,
+      opts.digestRecipientMode ?? 'external',
+      opts.ownerEmail ?? null,
+      opts.lastDigestSentAt ?? null,
     ) as { id: number };
   return r.id;
 }

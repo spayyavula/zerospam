@@ -195,6 +195,31 @@ function colsOf(table: string): Set<string> {
     (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((r) => r.name),
   );
 }
+const mailboxCols = colsOf('mailboxes');
+if (!mailboxCols.has('digest_enabled')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN digest_enabled INTEGER NOT NULL DEFAULT 0');
+}
+if (!mailboxCols.has('digest_hour')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN digest_hour INTEGER NOT NULL DEFAULT 8');
+}
+if (!mailboxCols.has('digest_recipient_mode')) {
+  db.exec("ALTER TABLE mailboxes ADD COLUMN digest_recipient_mode TEXT NOT NULL DEFAULT 'external'");
+}
+if (!mailboxCols.has('owner_email')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN owner_email TEXT');
+}
+if (!mailboxCols.has('last_digest_sent_at')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN last_digest_sent_at INTEGER');
+}
+if (!mailboxCols.has('digest_last_error')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN digest_last_error TEXT');
+}
+if (!mailboxCols.has('digest_consecutive_failures')) {
+  db.exec(
+    'ALTER TABLE mailboxes ADD COLUMN digest_consecutive_failures INTEGER NOT NULL DEFAULT 0',
+  );
+}
+
 const messageCols = colsOf('messages');
 if (!messageCols.has('attachment_count')) {
   db.exec('ALTER TABLE messages ADD COLUMN attachment_count INTEGER NOT NULL DEFAULT 0');
@@ -289,6 +314,13 @@ export type Mailbox = {
   display_name: string | null;
   quarantine_ttl_hours: number;
   created_at: number;
+  digest_enabled: number;
+  digest_hour: number;
+  digest_recipient_mode: 'external' | 'loopback';
+  owner_email: string | null;
+  last_digest_sent_at: number | null;
+  digest_last_error: string | null;
+  digest_consecutive_failures: number;
 };
 
 export type WhitelistRule = {
