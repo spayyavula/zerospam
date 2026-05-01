@@ -24,5 +24,10 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "nodemailer": "^8.0.7",
+    "undici": "^7.24.8",
+    "fast-xml-parser": "^5.7.2"
   }
 }
