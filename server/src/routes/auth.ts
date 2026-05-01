@@ -7,24 +7,12 @@ import { config } from '../config.js';
 import { recordAudit } from '../audit.js';
 import { db } from '../db.js';
 import { signVerifyToken } from '../verify-token.js';
+import { getOrCreateSystemMailboxId } from '../system-mailbox.js';
 import { renderVerifyEmailHtml, renderVerifyEmailText } from '../verify-email-template.js';
 import { sendMessage } from '../sender.js';
 
 async function dispatchVerificationEmail(app: FastifyInstance, userId: number, recipientEmail: string): Promise<void> {
-  const mb = db
-    .prepare(`
-      SELECT b.id FROM mailboxes b
-      JOIN users u ON u.account_id = b.account_id
-      WHERE u.id = ?
-      ORDER BY b.id ASC
-      LIMIT 1
-    `)
-    .get(userId) as { id: number } | undefined;
-  if (!mb) {
-    app.log.warn({ userId }, 'verification-resend skipped: no mailbox for account');
-    return;
-  }
-
+  const mailboxId = getOrCreateSystemMailboxId();
   const expHours = config.verifyTokenExpiryHours;
   const exp = Date.now() + expHours * 3600 * 1000;
   const token = signVerifyToken({ v: 1, userId, exp }, config.sessionSecret);
@@ -32,7 +20,7 @@ async function dispatchVerificationEmail(app: FastifyInstance, userId: number, r
   const username = recipientEmail.split('@')[0];
 
   await sendMessage({
-    mailboxId: mb.id,
+    mailboxId,
     to: [recipientEmail],
     subject: 'Verify your ZeroSpam email',
     text: renderVerifyEmailText({ username, verifyUrl, expiresHours: expHours }),

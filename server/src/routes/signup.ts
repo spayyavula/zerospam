@@ -9,6 +9,7 @@ import { ensureDkim } from '../dkim.js';
 import { signVerifyToken, verifyVerifyToken } from '../verify-token.js';
 import { renderVerifyEmailHtml, renderVerifyEmailText } from '../verify-email-template.js';
 import { sendMessage } from '../sender.js';
+import { getOrCreateSystemMailboxId } from '../system-mailbox.js';
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -113,7 +114,7 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
     // Dispatch verification email (best-effort — don't fail signup if mail fails)
     try {
       await sendMessage({
-        mailboxId,
+        mailboxId: getOrCreateSystemMailboxId(),
         to: [email],
         subject: 'Please verify your email — ZeroSpam',
         text: renderVerifyEmailText({ username, verifyUrl, expiresHours: config.verifyTokenExpiryHours }),

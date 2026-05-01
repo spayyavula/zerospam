@@ -13,6 +13,7 @@ import { db } from '../src/db.js';
 import * as sender from '../src/sender.js';
 import * as usernames from '../src/usernames.js';
 import { seedMailbox } from './helpers.js';
+import { config } from '../src/config.js';
 
 async function buildApp() {
   const app = Fastify({ logger: false });
@@ -199,5 +200,27 @@ describe('POST /api/auth/signup', () => {
     });
     expect(r.statusCode).toBe(400);
     expect(r.json().error).toMatch(/username/i);
+  });
+
+  it('verification email is sent from system mailbox, not user mailbox', async () => {
+    const app = await buildApp();
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/signup',
+      headers: { 'content-type': 'application/json' },
+      payload: { email: 'iso@example.com', password: 'correct-horse-battery-staple', username: 'iso' },
+    });
+    const userMb = db
+      .prepare("SELECT id FROM mailboxes WHERE address = 'iso@zero-spam.email'")
+      .get() as { id: number } | undefined;
+    const systemMb = db
+      .prepare('SELECT id FROM mailboxes WHERE address = ?')
+      .get(`noreply@${config.signupDomain}`) as { id: number } | undefined;
+
+    expect(userMb).toBeTruthy();
+    expect(systemMb).toBeTruthy();
+    // sendMessage was called with the system mailbox, not the user mailbox
+    expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ mailboxId: systemMb!.id }));
+    expect(sendSpy).not.toHaveBeenCalledWith(expect.objectContaining({ mailboxId: userMb!.id }));
   });
 });
