@@ -734,8 +734,16 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.post('/api/drafts/:id/send', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
-    const draft = db.prepare('SELECT * FROM drafts WHERE id = ?').get(id) as
+    const draft = db
+      .prepare(
+        `SELECT d.* FROM drafts d
+         JOIN mailboxes m ON m.id = d.mailbox_id
+         WHERE d.id = ? AND m.account_id = ?`,
+      )
+      .get(id, accountId) as
       | {
           mailbox_id: number;
           to_addresses: string | null;
@@ -748,7 +756,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
           references_header: string | null;
         }
       | undefined;
-    if (!draft) return reply.code(404).send({ error: 'not found' });
+    if (!draft) return reply.code(404).send({ error: 'draft not found' });
     const to = draft.to_addresses ? (JSON.parse(draft.to_addresses) as string[]) : [];
     if (!to.length) return reply.code(400).send({ error: 'draft has no recipients' });
     try {
@@ -906,6 +914,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   app.post('/api/send', async (req, reply) => {
     try {
       const body = sendSchema.parse(req.body);
+      const accountId = (req as any).account?.id;
+      if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+      if (!ownsMailbox(accountId, body.mailboxId)) {
+        return reply.code(404).send({ error: 'mailbox not found' });
+      }
       const result = await sendMessage(body);
       return result;
     } catch (e: any) {

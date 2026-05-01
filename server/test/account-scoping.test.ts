@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { startApi } from '../src/api.js';
 import { seedOwner, makeSessionCookie } from './fixtures/owner.js';
 import { createAccount } from '../src/accounts.js';
 import { db } from '../src/db.js';
 import { seedMailbox, injectQuarantined } from './helpers.js';
+import * as sender from '../src/sender.js';
 
 async function setupTwoAccounts() {
   const a1 = await seedOwner({ email: 'a@x.com' });
@@ -136,6 +137,56 @@ describe('account scoping', () => {
       expect(after.c).toBe(before.c);
     } finally {
       await app.close();
+    }
+  });
+
+  it("POST /api/send returns 404 for another account's mailboxId without sending", async () => {
+    const sendSpy = vi.spyOn(sender, 'sendMessage');
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'POST',
+        url: '/api/send',
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: {
+          mailboxId: mb2Id,
+          to: ['target@example.com'],
+          subject: 'phish',
+          text: 'phish body',
+        },
+      });
+      expect(r.statusCode).toBe(404);
+      expect(sendSpy).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+      sendSpy.mockRestore();
+    }
+  });
+
+  it("POST /api/drafts/:id/send returns 404 for another account's draft without sending", async () => {
+    const sendSpy = vi.spyOn(sender, 'sendMessage');
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      // Create a draft owned by account-2's mailbox (raw insert)
+      const draftId = 'd_test_draft_xyz';
+      db.prepare(
+        `INSERT INTO drafts (id, mailbox_id, to_addresses, subject, body_text, body_html, created_at, updated_at)
+         VALUES (?, ?, '[]', '', '', '', ?, ?)`,
+      ).run(draftId, mb2Id, Date.now(), Date.now());
+
+      const r = await app.inject({
+        method: 'POST',
+        url: `/api/drafts/${draftId}/send`,
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: {},
+      });
+      expect(r.statusCode).toBe(404);
+      expect(sendSpy).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+      sendSpy.mockRestore();
     }
   });
 });
