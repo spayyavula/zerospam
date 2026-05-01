@@ -298,4 +298,59 @@ describe('account scoping', () => {
       await app.close();
     }
   });
+
+  it("GET /api/search returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'GET',
+        url: `/api/search?mailboxId=${mb2Id}&q=test&folder=quarantine`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/whitelist returns 404 for another account's mailbox", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      const before = db.prepare('SELECT COUNT(*) AS c FROM whitelist_rules WHERE mailbox_id = ?').get(mb2Id) as { c: number };
+      const r = await app.inject({
+        method: 'POST',
+        url: '/api/whitelist',
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { mailboxId: mb2Id, kind: 'address', pattern: 'attacker@evil.com' },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT COUNT(*) AS c FROM whitelist_rules WHERE mailbox_id = ?').get(mb2Id) as { c: number };
+      expect(after.c).toBe(before.c);  // No rule was inserted
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("DELETE /api/whitelist/:id returns 404 for another account's whitelist rule", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2Id } = await setupTwoAccounts();
+      // Seed a rule on account-2's mailbox
+      const rule = db.prepare(
+        `INSERT INTO whitelist_rules (mailbox_id, kind, pattern, created_at) VALUES (?, ?, ?, ?) RETURNING id`,
+      ).get(mb2Id, 'address', 'allowed@example.com', Date.now()) as { id: number };
+      const r = await app.inject({
+        method: 'DELETE',
+        url: `/api/whitelist/${rule.id}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const stillExists = db.prepare('SELECT id FROM whitelist_rules WHERE id = ?').get(rule.id);
+      expect(stillExists).toBeTruthy();
+    } finally {
+      await app.close();
+    }
+  });
 });

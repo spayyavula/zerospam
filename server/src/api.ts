@@ -288,8 +288,14 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     limit: z.coerce.number().min(1).max(200).default(50),
   });
 
-  app.get('/api/search', async (req) => {
-    const { mailboxId, q, folder, limit } = searchQ.parse(req.query);
+  app.get('/api/search', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const mailboxId = Number((req.query as { mailboxId?: string }).mailboxId);
+    if (!ownsMailbox(accountId, mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
+    const { q, folder, limit } = searchQ.parse(req.query);
     // Sanitize the FTS query — escape double quotes and wrap each term as a prefix match.
     // Users get "boss" → matches boss, bossy, etc. without needing FTS5 syntax.
     const terms = q
@@ -646,8 +652,13 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     note: z.string().optional(),
   });
 
-  app.post('/api/whitelist', async (req) => {
+  app.post('/api/whitelist', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const r = ruleIn.parse(req.body);
+    if (!ownsMailbox(accountId, r.mailboxId)) {
+      return reply.code(404).send({ error: 'mailbox not found' });
+    }
     const result = db
       .prepare(
         'INSERT INTO whitelist_rules (mailbox_id, kind, pattern, note, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id',
@@ -657,8 +668,18 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return { id: result.id };
   });
 
-  app.delete('/api/whitelist/:id', async (req) => {
+  app.delete('/api/whitelist/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    const owned = db.prepare(`
+      SELECT 1 FROM whitelist_rules w
+      JOIN mailboxes b ON b.id = w.mailbox_id
+      WHERE w.id = ? AND b.account_id = ?
+    `).get(Number(id), accountId);
+    if (!owned) {
+      return reply.code(404).send({ error: 'whitelist rule not found' });
+    }
     const row = db.prepare('SELECT mailbox_id FROM whitelist_rules WHERE id = ?').get(Number(id)) as
       | { mailbox_id: number }
       | undefined;
