@@ -6,7 +6,7 @@ import { hashPassword } from '../users.js';
 import { createAccount } from '../accounts.js';
 import { isValidUsername, isReserved, isUsernameAvailable } from '../usernames.js';
 import { ensureDkim } from '../dkim.js';
-import { signVerifyToken } from '../verify-token.js';
+import { signVerifyToken, verifyVerifyToken } from '../verify-token.js';
 import { renderVerifyEmailHtml, renderVerifyEmailText } from '../verify-email-template.js';
 import { sendMessage } from '../sender.js';
 
@@ -125,4 +125,36 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.code(201).send({ userId, accountId });
   });
+
+  app.get('/auth/verify', async (req, reply) => {
+    const t = (req.query as { t?: string }).t ?? '';
+    const payload = verifyVerifyToken(t, config.sessionSecret, Date.now());
+    if (!payload) {
+      reply.type('text/html');
+      return renderVerifyResultHtml({ ok: false });
+    }
+    const user = db
+      .prepare('SELECT id, email_verified_at FROM users WHERE id = ?')
+      .get(payload.userId) as { id: number; email_verified_at: number | null } | undefined;
+    if (!user) {
+      reply.type('text/html');
+      return renderVerifyResultHtml({ ok: false });
+    }
+    if (!user.email_verified_at) {
+      db.prepare('UPDATE users SET email_verified_at = ? WHERE id = ?').run(Date.now(), user.id);
+    }
+    reply.type('text/html');
+    return renderVerifyResultHtml({ ok: true });
+  });
+}
+
+function renderVerifyResultHtml(args: { ok: boolean }): string {
+  if (args.ok) {
+    return `<!doctype html><html><body style="font-family:sans-serif;padding:48px;text-align:center;">
+<h1>Email verified.</h1><p>You can now log in.</p>
+</body></html>`;
+  }
+  return `<!doctype html><html><body style="font-family:sans-serif;padding:48px;text-align:center;">
+<h1>This link is expired or invalid.</h1><p>Sign up again or contact support.</p>
+</body></html>`;
 }
