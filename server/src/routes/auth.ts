@@ -6,6 +6,36 @@ import { createSession, destroySession, SESSION_COOKIE_NAME } from '../sessions.
 import { config } from '../config.js';
 import { recordAudit } from '../audit.js';
 import { db } from '../db.js';
+import { signVerifyToken } from '../verify-token.js';
+import { renderVerifyEmailHtml, renderVerifyEmailText } from '../verify-email-template.js';
+import { sendMessage } from '../sender.js';
+
+async function dispatchVerificationEmail(app: FastifyInstance, userId: number, recipientEmail: string): Promise<void> {
+  const mb = db
+    .prepare(`
+      SELECT b.id FROM mailboxes b
+      JOIN users u ON u.account_id = b.account_id
+      WHERE u.id = ?
+      ORDER BY b.id ASC
+      LIMIT 1
+    `)
+    .get(userId) as { id: number } | undefined;
+  if (!mb) return;  // No mailbox to send from — silently skip
+
+  const expHours = config.verifyTokenExpiryHours;
+  const exp = Date.now() + expHours * 3600 * 1000;
+  const token = signVerifyToken({ v: 1, userId, exp }, config.sessionSecret);
+  const verifyUrl = `${config.publicBaseUrl}/auth/verify?t=${encodeURIComponent(token)}`;
+  const username = recipientEmail.split('@')[0];
+
+  await sendMessage({
+    mailboxId: mb.id,
+    to: [recipientEmail],
+    subject: 'Verify your ZeroSpam email',
+    text: renderVerifyEmailText({ username, verifyUrl, expiresHours: expHours }),
+    html: renderVerifyEmailHtml({ username, verifyUrl, expiresHours: expHours }),
+  });
+}
 
 // The owner "email" is a credential identifier, not a delivery address — accept
 // any non-empty string containing '@' (e.g. me@local for dev) instead of zod's
@@ -51,7 +81,14 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     if (!user.email_verified_at) {
       recordAudit({ event: 'login.fail', userId: user.id, detail: { reason: 'email-not-verified' }, ip, userAgent: ua });
-      reply.code(403).send({ error: 'email not verified' });
+      // Best-effort verification-resend; don't fail the request if mail fails.
+      // Returns the same generic 401 as bad-password / unknown-email to avoid an existence oracle.
+      try {
+        await dispatchVerificationEmail(app, user.id, email);
+      } catch (e) {
+        app.log.warn({ err: e, userId: user.id }, 'login: verification-resend dispatch failed');
+      }
+      reply.code(401).send({ error: 'invalid-credentials' });
       return;
     }
 

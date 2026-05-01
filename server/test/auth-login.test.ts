@@ -1,5 +1,5 @@
 // server/test/auth-login.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import { authenticator } from 'otplib';
@@ -7,6 +7,8 @@ import { authRoutes } from '../src/routes/auth.js';
 import { seedOwner } from './fixtures/owner.js';
 import { db } from '../src/db.js';
 import { SESSION_COOKIE_NAME } from '../src/sessions.js';
+import * as sender from '../src/sender.js';
+import { seedMailbox } from './helpers.js';
 
 async function buildApp() {
   const app = Fastify();
@@ -111,7 +113,25 @@ describe('login + TOTP', () => {
 });
 
 describe('login is blocked until verified', () => {
-  it('rejects with email-not-verified error for an unverified user', async () => {
+  let sendSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    // Seed a mailbox for account_id=1 so dispatchVerificationEmail can send from it.
+    seedMailbox('pending@zero-spam.email');
+    sendSpy = vi.spyOn(sender, 'sendMessage').mockResolvedValue({
+      messageId: 'test-msg-id',
+      envelopeFrom: 'noreply@zero-spam.email',
+      recipients: ['pending@example.com'],
+      signed: true,
+      whitelistAdded: 0,
+    });
+  });
+
+  afterEach(() => {
+    sendSpy.mockRestore();
+  });
+
+  it('returns generic 401 for unverified user and dispatches a verification-resend email', async () => {
     const { email, password } = await seedOwner({ email: 'pending@example.com', verified: false });
     const app = await buildApp();
     const r = await app.inject({
@@ -119,7 +139,12 @@ describe('login is blocked until verified', () => {
       headers: { 'content-type': 'application/json' },
       payload: { email, password },
     });
-    expect(r.statusCode).toBe(403);
-    expect(r.json().error).toMatch(/verif/i);
+    expect(r.statusCode).toBe(401);
+    expect(r.json().error).toBe('invalid-credentials');
+    // Verification-resend email was dispatched
+    expect(sendSpy).toHaveBeenCalledOnce();
+    const sendCall = sendSpy.mock.calls[0][0];
+    expect(sendCall.subject.toLowerCase()).toMatch(/verify/);
+    expect(sendCall.to).toContain(email);
   });
 });
