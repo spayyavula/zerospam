@@ -71,6 +71,29 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return !!r;
   }
 
+  function ownsMessage(accountId: number, messageId: string): boolean {
+    const r = db
+      .prepare(`
+        SELECT 1 FROM messages m
+        JOIN mailboxes b ON b.id = m.mailbox_id
+        WHERE m.id = ? AND b.account_id = ?
+      `)
+      .get(messageId, accountId);
+    return !!r;
+  }
+
+  function ownsAttachment(accountId: number, attachmentId: number): boolean {
+    const r = db
+      .prepare(`
+        SELECT 1 FROM attachments a
+        JOIN messages m ON m.id = a.message_id
+        JOIN mailboxes b ON b.id = m.mailbox_id
+        WHERE a.id = ? AND b.account_id = ?
+      `)
+      .get(attachmentId, accountId);
+    return !!r;
+  }
+
   app.get('/api/mailboxes', async (req) => {
     const accountId = (req as any).account?.id ?? 0;
     return db
@@ -301,14 +324,20 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.get('/api/messages/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const row = db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as MessageRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
     return row;
   });
 
   app.get('/api/messages/:id/trackers', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const row = db
       .prepare('SELECT tracker_count, tracker_details FROM messages WHERE id = ?')
       .get(id) as { tracker_count: number; tracker_details: string | null } | undefined;
@@ -360,8 +389,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return reply.send(resp.body);
   });
 
-  app.get('/api/messages/:id/attachments', async (req) => {
+  app.get('/api/messages/:id/attachments', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     return db
       .prepare(
         'SELECT id, filename, content_type, size_bytes, cid, inline FROM attachments WHERE message_id = ? ORDER BY id',
@@ -370,7 +402,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.get('/api/attachments/:id/download', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsAttachment(accountId, Number(id))) return reply.code(404).send({ error: 'attachment not found' });
     const att = db.prepare('SELECT * FROM attachments WHERE id = ?').get(Number(id)) as
       | AttachmentRow
       | undefined;
@@ -388,8 +423,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return reply.send(createReadStream(att.path));
   });
 
-  app.post('/api/messages/:id/read', async (req) => {
+  app.post('/api/messages/:id/read', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const body = (req.body as { read?: boolean }) ?? {};
     db.prepare('UPDATE messages SET read = ? WHERE id = ?').run(body.read === false ? 0 : 1, id);
     const row = db.prepare('SELECT mailbox_id FROM messages WHERE id = ?').get(id) as { mailbox_id: number } | undefined;
@@ -397,8 +435,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     return { ok: true };
   });
 
-  app.post('/api/messages/:id/star', async (req) => {
+  app.post('/api/messages/:id/star', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const body = (req.body as { starred?: boolean }) ?? {};
     db.prepare('UPDATE messages SET starred = ? WHERE id = ?').run(body.starred ? 1 : 0, id);
     const row = db.prepare('SELECT mailbox_id FROM messages WHERE id = ?').get(id) as { mailbox_id: number } | undefined;
@@ -407,7 +448,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.post('/api/messages/:id/move', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const folder = z
       .object({ folder: z.enum(['inbox', 'quarantine', 'trash']) })
       .parse(req.body).folder;
@@ -423,7 +467,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   app.delete('/api/messages/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const row = db.prepare('SELECT mailbox_id, raw_path FROM messages WHERE id = ?').get(id) as
       | { mailbox_id: number; raw_path: string }
       | undefined;
@@ -454,8 +501,23 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     ]),
   });
 
-  app.post('/api/messages/bulk', async (req) => {
-    const { ids, action } = bulkSchema.parse(req.body);
+  app.post('/api/messages/bulk', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const { ids: rawIds, action } = bulkSchema.parse(req.body);
+    // Filter to only IDs owned by the caller's account
+    const ownedRows = rawIds.length === 0
+      ? []
+      : (db.prepare(`
+          SELECT m.id FROM messages m
+          JOIN mailboxes b ON b.id = m.mailbox_id
+          WHERE b.account_id = ? AND m.id IN (${rawIds.map(() => '?').join(',')})
+        `).all(accountId, ...rawIds) as { id: string }[]);
+    const ownedIdSet = new Set(ownedRows.map((r) => r.id));
+    const ids = rawIds.filter((id) => ownedIdSet.has(id));
+
+    if (ids.length === 0) return { ok: true, affected: 0 };
+
     const placeholders = ids.map(() => '?').join(',');
 
     const affectedMailboxes = new Set<number>();
@@ -607,7 +669,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
 
   // Convenience: whitelist the sender of a quarantined message and move it to inbox.
   app.post('/api/messages/:id/trust-sender', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as MessageRow | undefined;
     if (!msg) return reply.code(404).send({ error: 'not found' });
     const exists = db
@@ -781,7 +846,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
 
   // ---- reply prefill ----
   app.get('/api/messages/:id/reply', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
     const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
     const mode = z
       .object({ mode: z.enum(['reply', 'reply-all', 'forward']).default('reply') })
       .parse(req.query).mode;

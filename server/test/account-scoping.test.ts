@@ -19,8 +19,16 @@ async function setupTwoAccounts() {
   // Mailbox owned by account 2
   const mb2 = seedMailbox('victim@example.com');
   db.prepare('UPDATE mailboxes SET account_id = ? WHERE id = ?').run(acct2.id, mb2);
-  await injectQuarantined({ to: 'victim@example.com', from: 'a@b.com' });
-  return { account1Cookie: makeSessionCookie(a1.userId), mb2Id: mb2 };
+  const mb2MsgId = await injectQuarantined({ to: 'victim@example.com', from: 'a@b.com' });
+  // Insert a dummy attachment on that message so we have an integer attachment id to attack
+  const attRow = db
+    .prepare(
+      `INSERT INTO attachments (message_id, filename, content_type, size_bytes, path)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+    )
+    .get(mb2MsgId, 'a.txt', 'text/plain', 5, '/tmp/x') as { id: number };
+  const mb2AttId = attRow.id;
+  return { account1Cookie: makeSessionCookie(a1.userId), mb2Id: mb2, mb2MsgId, mb2AttId };
 }
 
 describe('account scoping', () => {
@@ -187,6 +195,107 @@ describe('account scoping', () => {
     } finally {
       await app.close();
       sendSpy.mockRestore();
+    }
+  });
+
+  // ---- message-level cross-tenant tests ----
+
+  it("GET /api/messages/:id returns 404 for another account's message", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2MsgId } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'GET',
+        url: `/api/messages/${mb2MsgId}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("GET /api/attachments/:id/download returns 404 for another account's attachment", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2AttId } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'GET',
+        url: `/api/attachments/${mb2AttId}/download`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("POST /api/messages/:id/move returns 404 for another account's message; folder unchanged", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2MsgId } = await setupTwoAccounts();
+      const before = db.prepare('SELECT folder FROM messages WHERE id = ?').get(mb2MsgId) as { folder: string };
+      const r = await app.inject({
+        method: 'POST',
+        url: `/api/messages/${mb2MsgId}/move`,
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { folder: 'inbox' },
+      });
+      expect(r.statusCode).toBe(404);
+      const after = db.prepare('SELECT folder FROM messages WHERE id = ?').get(mb2MsgId) as { folder: string };
+      expect(after.folder).toBe(before.folder);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("DELETE /api/messages/:id returns 404 for another account's message; row still present", async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2MsgId } = await setupTwoAccounts();
+      const r = await app.inject({
+        method: 'DELETE',
+        url: `/api/messages/${mb2MsgId}`,
+        headers: { cookie: account1Cookie },
+      });
+      expect(r.statusCode).toBe(404);
+      const stillExists = db.prepare('SELECT id FROM messages WHERE id = ?').get(mb2MsgId);
+      expect(stillExists).toBeTruthy();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('POST /api/messages/bulk filters to only owned IDs; unowned message untouched', async () => {
+    const app = await startApi();
+    try {
+      const { account1Cookie, mb2MsgId } = await setupTwoAccounts();
+      // Get account-1's account_id from the seeded user
+      const acct1Id = (db.prepare('SELECT account_id FROM users WHERE email = ?').get('a@x.com') as { account_id: number }).account_id;
+      // Create a mailbox owned by account-1 and inject a message into it
+      const mb1own = seedMailbox('bulk_a1own@example.com');
+      db.prepare('UPDATE mailboxes SET account_id = ? WHERE id = ?').run(acct1Id, mb1own);
+      const a1MsgId = await injectQuarantined({ to: 'bulk_a1own@example.com', from: 'sender@test.com' });
+
+      const beforeMb2 = db.prepare('SELECT read FROM messages WHERE id = ?').get(mb2MsgId) as { read: number };
+
+      const r = await app.inject({
+        method: 'POST',
+        url: '/api/messages/bulk',
+        headers: { cookie: account1Cookie, 'content-type': 'application/json' },
+        payload: { ids: [a1MsgId, mb2MsgId], action: 'mark-read' },
+      });
+      expect(r.statusCode).toBe(200);
+
+      // account-1's own message should be marked read
+      const a1Msg = db.prepare('SELECT read FROM messages WHERE id = ?').get(a1MsgId) as { read: number };
+      expect(a1Msg.read).toBe(1);
+
+      // account-2's message must be untouched
+      const afterMb2 = db.prepare('SELECT read FROM messages WHERE id = ?').get(mb2MsgId) as { read: number };
+      expect(afterMb2.read).toBe(beforeMb2.read);
+    } finally {
+      await app.close();
     }
   });
 });
