@@ -29,7 +29,12 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   await app.register(rateLimit, { global: false });
 
   // Public routes (no auth) — health check + login/logout
-  const PUBLIC_PREFIXES = ['/api/health', '/api/auth/login', '/api/auth/logout'];
+  const PUBLIC_PREFIXES = [
+    '/api/health',
+    '/api/auth/login',
+    '/api/auth/logout',
+    '/public/digest/allow',
+  ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
     await requireAuth(req as any, reply as any);
@@ -930,6 +935,34 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     const { id } = req.params as { id: string };
     db.prepare('DELETE FROM aliases WHERE id = ?').run(Number(id));
     return { ok: true };
+  });
+
+  // ---- public digest action routes ----
+  // No auth, no CORS, no rate limit (v1). Reverse proxy can lock down /api/* if needed.
+  app.get('/public/digest/allow', async (req, reply) => {
+    const { renderConfirmPage, renderExpiredPage } = await import('./digest-pages.js');
+    const { verify } = await import('./digest-token.js');
+    const { loadDigestSigningSecret } = await import('./config.js');
+    const t = (req.query as { t?: string }).t ?? '';
+    const payload = verify(t, loadDigestSigningSecret(), Date.now());
+    if (!payload) {
+      reply.type('text/html');
+      return renderExpiredPage();
+    }
+    const mb = db
+      .prepare('SELECT id FROM mailboxes WHERE id = ?')
+      .get(payload.mailboxId) as { id: number } | undefined;
+    if (!mb) {
+      reply.type('text/html');
+      return renderExpiredPage();
+    }
+    const count = (db
+      .prepare(
+        "SELECT COUNT(*) AS c FROM messages WHERE mailbox_id = ? AND folder = 'quarantine' AND from_address = ?",
+      )
+      .get(payload.mailboxId, payload.sender.toLowerCase()) as { c: number }).c;
+    reply.type('text/html');
+    return renderConfirmPage({ token: t, sender: payload.sender, quarantinedCount: count });
   });
 
   // ---- SSE ----
