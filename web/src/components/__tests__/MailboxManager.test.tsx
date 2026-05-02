@@ -20,6 +20,7 @@ function fakeMailbox(over: Partial<Mailbox> = {}): Mailbox {
   return {
     id: 1,
     address: 'alice@example.com',
+    domain_id: 0,
     display_name: 'Alice',
     quarantine_ttl_hours: 168,
     screener_sla_hours: 48,
@@ -28,9 +29,10 @@ function fakeMailbox(over: Partial<Mailbox> = {}): Mailbox {
     digest_recipient_mode: 'external',
     owner_email: null,
     digest_last_error: null,
+    digest_consecutive_failures: 0,
     last_digest_sent_at: null,
-    account_id: 1,
     created_at: 0,
+    ...over,
   } as Mailbox;
 }
 
