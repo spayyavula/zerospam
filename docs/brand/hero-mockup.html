@@ -7,30 +7,32 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,700;1,8..60,400;1,8..60,500&family=Geist:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet"
   />
   <style>
-    /* ── tokens ─────────────────────────────────────────────────────────── */
+    /* ── tokens — The Reading Room v2 ───────────────────────────────────── */
     :root {
-      --ink:        #0E0F12;
-      --ink-soft:   #2A2B30;
-      --bone:       #F2EDE4;
-      --paper:      #FAF7F1;
-      --quiet:      #5C5A57;
-      --rule:       #E2DCD0;
-      --signal:     #FF4D2E;
-      --signal-ink: #7A1F0E;
+      --paper:        #FBF8F1;
+      --paper-deep:   #F5EFE3;
+      --ink:          #0A0A0A;
+      --ink-soft:     #2A2A2A;
+      --quiet:        #6B6863;
+      --rule:         #E8E1D2;
+      --rule-strong:  #1F1F1F;
+      --signal:       #FFD52E;
+      --signal-ink:   #7A5C00;
+      --signal-deep:  #E8B800;
 
-      --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+      --font-display: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
       --font-body:    'Geist', 'Helvetica Neue', system-ui, sans-serif;
       --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-      --col: minmax(0, 1fr);
-      --gutter: 24px;
-      --margin: clamp(24px, 5vw, 80px);
+      --margin: clamp(40px, 6vw, 120px);
+      --gutter: 28px;
       --rule-w: 1px;
       --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+      --ease-snap: cubic-bezier(0.85, 0, 0.15, 1);
     }
 
     /* ── reset ──────────────────────────────────────────────────────────── */
@@ -42,110 +44,122 @@
     /* ── page ───────────────────────────────────────────────────────────── */
     body {
       min-height: 100vh;
-      background: var(--bone);
-      color: var(--ink);
+      background: var(--paper);
+      color: var(--ink-soft);
       font-family: var(--font-body);
       font-weight: 400;
       font-size: 16px;
       line-height: 1.6;
-      font-feature-settings: 'ss01' on, 'ss02' on;
+      font-feature-settings: 'ss01' on;
+      font-variant-numeric: tabular-nums;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       position: relative;
       overflow-x: hidden;
     }
 
-    /* paper grain overlay — subtle, atmosphere not decoration */
+    /* paper grain — atmosphere, not decoration */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 100;
-      opacity: 0.06;
+      opacity: 0.055;
       mix-blend-mode: multiply;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     }
 
     /* ── frame ──────────────────────────────────────────────────────────── */
     .frame {
-      max-width: 1440px;
+      max-width: 1480px;
       margin: 0 auto;
       padding: 0 var(--margin);
     }
 
-    /* ── topbar ─────────────────────────────────────────────────────────── */
-    .topbar {
+    /* ── masthead ───────────────────────────────────────────────────────── */
+    .masthead {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr auto;
       align-items: end;
-      padding-top: clamp(24px, 4vw, 40px);
+      padding-top: clamp(28px, 4vw, 44px);
       padding-bottom: 18px;
       border-bottom: var(--rule-w) solid var(--rule);
+      gap: 32px;
     }
 
     .wordmark {
       font-family: var(--font-display);
       font-style: italic;
-      font-size: clamp(28px, 3.5vw, 38px);
+      font-weight: 500;
+      font-size: clamp(30px, 3.4vw, 40px);
       line-height: 1;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.015em;
+      color: var(--ink);
       display: inline-flex;
       align-items: baseline;
-      gap: 0.05em;
     }
     .wordmark .dot {
       display: inline-block;
       width: 0.16em;
       height: 0.16em;
-      margin-left: 0.06em;
+      margin: 0 0.06em;
       border-radius: 50%;
       background: var(--signal);
-      transform: translateY(-0.05em);
+      transform: translateY(-0.04em);
+      box-shadow: 0 0 0 0 var(--signal);
     }
 
-    .topbar-meta {
+    .colophon-top {
       font-family: var(--font-mono);
       font-size: 11px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.10em;
       text-transform: uppercase;
       color: var(--quiet);
       text-align: right;
       align-self: end;
+      line-height: 1.6;
     }
-    .topbar-meta span + span::before {
+    .colophon-top span + span::before {
       content: " · ";
-      margin: 0 0.4em;
+      margin: 0 0.45em;
       color: var(--rule);
     }
 
     /* ── hero ───────────────────────────────────────────────────────────── */
     .hero {
       display: grid;
-      grid-template-columns: repeat(12, var(--col));
+      grid-template-columns: repeat(12, minmax(0, 1fr));
       column-gap: var(--gutter);
-      padding-top: clamp(48px, 9vw, 120px);
-      padding-bottom: clamp(48px, 9vw, 96px);
+      padding-top: clamp(72px, 11vw, 140px);
+      padding-bottom: clamp(80px, 10vw, 120px);
       position: relative;
     }
 
-    .hero-marginalia {
+    .hero-eyebrow {
       grid-column: 1 / span 12;
       font-family: var(--font-mono);
       font-size: 11px;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--quiet);
-      margin-bottom: 28px;
+      margin-bottom: 36px;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
-    .hero-marginalia::before {
+    .hero-eyebrow::before {
       content: "";
-      width: 28px;
+      width: 32px;
       height: var(--rule-w);
       background: var(--ink);
+    }
+    .hero-eyebrow .yellow-square {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      background: var(--signal);
+      margin: 0 4px 0 4px;
     }
 
     .hero-headline {
@@ -153,16 +167,16 @@
       font-family: var(--font-display);
       font-style: italic;
       font-weight: 400;
-      font-size: clamp(48px, 9vw, 132px);
-      line-height: 0.96;
-      letter-spacing: -0.015em;
+      font-size: clamp(56px, 9.5vw, 144px);
+      line-height: 0.97;
+      letter-spacing: -0.02em;
       color: var(--ink);
-      margin: 0 0 clamp(28px, 4vw, 44px);
+      margin: 0 0 clamp(36px, 5vw, 56px);
       text-wrap: balance;
     }
-    .hero-headline em {
+    .hero-headline .roman {
       font-style: normal;
-      color: var(--quiet);
+      color: var(--ink-soft);
     }
     .hero-headline .accent {
       font-style: italic;
@@ -173,73 +187,95 @@
     .hero-headline .accent::after {
       content: "";
       position: absolute;
-      left: 0;
-      right: 0;
+      left: -0.02em;
+      right: -0.02em;
       bottom: 0.08em;
-      height: 0.08em;
+      height: 0.16em;
       background: var(--signal);
       transform-origin: left center;
-      animation: underline-in 700ms var(--ease) 700ms both;
+      z-index: -1;
+      animation: highlight-in 720ms var(--ease-snap) 720ms both;
     }
 
     .hero-lede {
+      grid-column: 5 / span 7;
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: clamp(20px, 1.7vw, 24px);
+      line-height: 1.42;
+      color: var(--ink);
+      max-width: 32ch;
+      margin: 0 0 26px;
+      letter-spacing: -0.005em;
+    }
+
+    .hero-supporting {
       grid-column: 5 / span 6;
       font-family: var(--font-body);
-      font-weight: 400;
-      font-size: clamp(17px, 1.3vw, 19px);
-      line-height: 1.55;
-      color: var(--ink-soft);
-      max-width: 46ch;
-      margin: 0;
+      font-size: clamp(16px, 1.15vw, 17px);
+      line-height: 1.6;
+      color: var(--quiet);
+      max-width: 50ch;
+      margin: 0 0 36px;
     }
-    .hero-lede strong {
+    .hero-supporting strong {
       font-weight: 500;
-      color: var(--ink);
+      color: var(--ink-soft);
+    }
+    .hero-supporting .mono-aside {
+      display: block;
+      margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--quiet);
+      font-style: italic;
     }
 
     .hero-cta-row {
       grid-column: 5 / span 8;
-      margin-top: clamp(28px, 4vw, 40px);
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 28px;
+      gap: 32px;
     }
 
     .btn {
       font-family: var(--font-mono);
       font-size: 12px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.10em;
       text-transform: uppercase;
-      padding: 14px 22px;
+      padding: 16px 26px;
       border: 1px solid var(--ink);
       background: transparent;
       color: var(--ink);
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      transition: background-color 180ms var(--ease), color 180ms var(--ease), transform 180ms var(--ease);
+      gap: 12px;
+      transition:
+        background-color 200ms var(--ease),
+        color 200ms var(--ease),
+        transform 150ms var(--ease);
       will-change: transform;
     }
     .btn:hover {
       background: var(--signal);
-      border-color: var(--signal);
-      color: var(--bone);
+      color: var(--ink);
     }
     .btn:active { transform: scale(0.98); }
     .btn .arrow {
       transition: transform 220ms var(--ease);
     }
-    .btn:hover .arrow { transform: translateX(3px); }
+    .btn:hover .arrow { transform: translateX(4px); }
 
     .ghost {
       font-family: var(--font-mono);
       font-size: 12px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.10em;
       text-transform: uppercase;
       color: var(--quiet);
+      padding-bottom: 3px;
       border-bottom: 1px solid transparent;
-      padding-bottom: 2px;
       transition: color 180ms var(--ease), border-color 180ms var(--ease);
     }
     .ghost:hover {
@@ -247,159 +283,303 @@
       border-bottom-color: var(--ink);
     }
 
-    /* ── footnotes ──────────────────────────────────────────────────────── */
-    .footnotes {
-      border-top: var(--rule-w) solid var(--ink);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0;
-    }
-    .footnote {
-      padding: 28px 28px 36px;
-      border-right: var(--rule-w) solid var(--rule);
+    /* ── section divider — NYT-style hard rule with punch-through label ─── */
+    .section-rule {
       position: relative;
+      height: 1px;
+      background: var(--rule-strong);
+      margin: clamp(72px, 9vw, 100px) 0 clamp(48px, 6vw, 72px);
     }
-    .footnote:last-child { border-right: 0; }
-    .footnote-id {
+    .section-rule .label {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--paper);
+      padding-right: 18px;
       font-family: var(--font-mono);
       font-size: 11px;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--quiet);
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      color: var(--ink);
     }
-    .footnote-id .glyph {
+    .section-rule .label::after {
+      content: "";
       display: inline-block;
       width: 8px;
       height: 8px;
-      background: var(--ink);
+      background: var(--signal);
+      margin-left: 14px;
+      transform: translateY(-1px);
     }
+    .section-rule .meta-right {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--paper);
+      padding-left: 18px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    /* ── footnotes / principles ─────────────────────────────────────────── */
+    .footnotes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border-top: var(--rule-w) solid var(--rule);
+    }
+    .footnote {
+      padding: 36px 36px 44px;
+      border-right: var(--rule-w) solid var(--rule);
+      position: relative;
+    }
+    .footnote:first-child { padding-left: 0; }
+    .footnote:last-child  { padding-right: 0; border-right: 0; }
+
+    .footnote-byline {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .footnote-byline .square {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      background: var(--signal);
+    }
+
     .footnote h3 {
       font-family: var(--font-display);
       font-style: italic;
       font-weight: 400;
-      font-size: clamp(22px, 2.2vw, 26px);
-      line-height: 1.1;
-      letter-spacing: -0.005em;
-      margin: 0 0 8px;
+      font-size: clamp(28px, 2.7vw, 34px);
+      line-height: 1.08;
+      letter-spacing: -0.01em;
+      margin: 0 0 14px;
       color: var(--ink);
     }
     .footnote p {
-      font-size: 14px;
-      line-height: 1.55;
+      font-size: 15px;
+      line-height: 1.6;
       color: var(--quiet);
       margin: 0;
-      max-width: 32ch;
+      max-width: 36ch;
+    }
+    .footnote p strong {
+      font-weight: 500;
+      color: var(--ink-soft);
     }
 
-    /* ── colophon ───────────────────────────────────────────────────────── */
-    .colophon {
-      padding: 22px 0 32px;
+    /* ── pull-quote (one product moment) ────────────────────────────────── */
+    .pullquote {
+      grid-column: 2 / span 10;
+      margin: clamp(72px, 9vw, 100px) auto;
+      padding: clamp(48px, 6vw, 72px) clamp(32px, 4vw, 56px);
+      background: var(--paper-deep);
+      border-top: 1px solid var(--rule-strong);
+      border-bottom: 1px solid var(--rule-strong);
+      max-width: 1100px;
+      position: relative;
+    }
+    .pullquote .mark {
+      position: absolute;
+      top: -0.4em;
+      left: clamp(28px, 4vw, 48px);
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: clamp(120px, 16vw, 200px);
+      line-height: 1;
+      color: var(--signal);
+      opacity: 0.85;
+      pointer-events: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .pullquote blockquote {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(28px, 3.6vw, 44px);
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      margin: 0 0 28px;
+      padding-left: clamp(48px, 7vw, 96px);
+      max-width: 28ch;
+    }
+    .pullquote cite {
+      display: block;
       font-family: var(--font-mono);
       font-size: 11px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      font-style: normal;
+      padding-left: clamp(48px, 7vw, 96px);
+    }
+
+    /* ── footer ─────────────────────────────────────────────────────────── */
+    .colophon-bottom {
+      padding: 28px 0 40px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.10em;
       text-transform: uppercase;
       color: var(--quiet);
       display: flex;
       justify-content: space-between;
       gap: 24px;
       border-top: var(--rule-w) solid var(--rule);
-      margin-top: clamp(80px, 10vw, 120px);
+      flex-wrap: wrap;
     }
-    .colophon a:hover { color: var(--ink); }
+    .colophon-bottom a {
+      transition: color 180ms var(--ease);
+    }
+    .colophon-bottom a:hover { color: var(--ink); }
 
     /* ── animation ──────────────────────────────────────────────────────── */
     @keyframes rise {
-      from { opacity: 0; transform: translateY(14px); }
+      from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    @keyframes underline-in {
+    @keyframes highlight-in {
       from { transform: scaleX(0); }
       to   { transform: scaleX(1); }
     }
 
     @media (prefers-reduced-motion: no-preference) {
-      .topbar       { animation: rise 500ms var(--ease) 0ms both; }
-      .hero-marginalia { animation: rise 500ms var(--ease) 80ms both; }
-      .hero-headline   { animation: rise 600ms var(--ease) 160ms both; }
-      .hero-lede       { animation: rise 500ms var(--ease) 320ms both; }
-      .hero-cta-row    { animation: rise 500ms var(--ease) 400ms both; }
-      .footnotes       { animation: rise 500ms var(--ease) 480ms both; }
+      .masthead         { animation: rise 540ms var(--ease) 0ms both; }
+      .hero-eyebrow     { animation: rise 520ms var(--ease) 100ms both; }
+      .hero-headline    { animation: rise 640ms var(--ease) 200ms both; }
+      .hero-lede        { animation: rise 540ms var(--ease) 380ms both; }
+      .hero-supporting  { animation: rise 520ms var(--ease) 460ms both; }
+      .hero-cta-row     { animation: rise 520ms var(--ease) 540ms both; }
+      .section-rule     { animation: rise 520ms var(--ease) 620ms both; }
+      .footnotes        { animation: rise 540ms var(--ease) 700ms both; }
     }
 
     /* ── responsive ─────────────────────────────────────────────────────── */
-    @media (max-width: 720px) {
+    @media (max-width: 880px) {
       .hero-lede,
+      .hero-supporting,
       .hero-cta-row { grid-column: 1 / span 12; }
-      .footnotes { grid-template-columns: 1fr; }
-      .footnote { border-right: 0; border-bottom: var(--rule-w) solid var(--rule); }
+      .footnotes    { grid-template-columns: 1fr; }
+      .footnote {
+        border-right: 0;
+        border-bottom: var(--rule-w) solid var(--rule);
+        padding: 28px 0 32px;
+      }
       .footnote:last-child { border-bottom: 0; }
-      .topbar { grid-template-columns: 1fr; gap: 12px; }
-      .topbar-meta { text-align: left; }
+      .masthead { grid-template-columns: 1fr; gap: 16px; }
+      .colophon-top { text-align: left; }
+      .pullquote blockquote { padding-left: 0; }
+      .pullquote cite       { padding-left: 0; }
+      .pullquote .mark      { left: 0; font-size: 120px; }
     }
   </style>
 </head>
 <body>
   <div class="frame">
 
-    <header class="topbar">
+    <header class="masthead">
       <div class="wordmark" aria-label="ZeroSpam">
-        ZeroSpam<span class="dot" aria-hidden="true"></span>
+        Zero<span class="dot" aria-hidden="true"></span>Spam
       </div>
-      <div class="topbar-meta">
-        <span>est. 2026</span><span>by invitation only</span><span>v1.0</span>
+      <div class="colophon-top">
+        <span>est. mmxxvi</span><span>by invitation only</span><span>vol. 01 / no. 01</span>
       </div>
     </header>
 
     <main class="hero">
-      <div class="hero-marginalia">
-        // 01 &nbsp;— &nbsp;default-deny inbox
+      <div class="hero-eyebrow">
+        <span>The Manual</span>
+        <span class="yellow-square" aria-hidden="true"></span>
+        <span>01 — A different kind of inbox</span>
       </div>
 
       <h1 class="hero-headline">
         Your inbox is <span class="accent">by invitation</span>.<br />
-        Everything else <em>expires</em>.
+        <span class="roman">Everything else expires.</span>
       </h1>
 
       <p class="hero-lede">
-        ZeroSpam is whitelist-first email. Senders you've allowed reach you. The rest land
-        in <strong>quarantine</strong> and clear themselves out on a schedule you set.
-        No filters guessing at intent. No inbox debt.
+        ZeroSpam is whitelist-first email. We default-deny so you don't have to.
+      </p>
+
+      <p class="hero-supporting">
+        New senders land in a <strong>screener</strong>. You decide who gets in. Anyone you
+        haven't waved through goes to <strong>quarantine</strong>, which clears itself on a
+        schedule you set. No filters guessing at intent. No backlog. No inbox debt.
+        <span class="mono-aside">// the only score is the one you keep.</span>
       </p>
 
       <div class="hero-cta-row">
         <a class="btn" href="#" role="button">
           Get an invite
-          <span class="arrow" aria-hidden="true">▸</span>
+          <span class="arrow" aria-hidden="true">↗</span>
         </a>
-        <a class="ghost" href="#">Read the manual ↗</a>
+        <a class="ghost" href="#">Read the manual</a>
+        <a class="ghost" href="#">Sign in</a>
       </div>
     </main>
 
+    <div class="section-rule" aria-hidden="true">
+      <span class="label">The Manual — 03 Principles</span>
+      <span class="meta-right">2026 · §1</span>
+    </div>
+
     <section class="footnotes" aria-label="Principles">
       <article class="footnote">
-        <div class="footnote-id"><span class="glyph"></span> Footnote 01</div>
-        <h3>The screener.</h3>
-        <p>A new sender shows up. Yes lets them through. No mutes them for thirty days. That's the entire interaction model.</p>
+        <div class="footnote-byline">
+          <span class="square" aria-hidden="true"></span>
+          <span>Footnote 01 — The Screener</span>
+        </div>
+        <h3>A new sender shows up. You decide.</h3>
+        <p>Yes lets them through. No mutes them for thirty days. <strong>That's the entire interaction model.</strong> No swipes, no scores, no machine learning.</p>
       </article>
+
       <article class="footnote">
-        <div class="footnote-id"><span class="glyph"></span> Footnote 02</div>
-        <h3>Quarantine that expires.</h3>
-        <p>Anything not whitelisted lands here and clears itself on a TTL you set. 168 hours by default. No backlog, ever.</p>
+        <div class="footnote-byline">
+          <span class="square" aria-hidden="true"></span>
+          <span>Footnote 02 — Quarantine</span>
+        </div>
+        <h3>Mail that clears itself.</h3>
+        <p>Anything not whitelisted lands in quarantine and expires on a TTL you set — <strong>168 hours</strong> by default. The backlog is finite. The TTL is yours to lower.</p>
       </article>
+
       <article class="footnote">
-        <div class="footnote-id"><span class="glyph"></span> Footnote 03</div>
+        <div class="footnote-byline">
+          <span class="square" aria-hidden="true"></span>
+          <span>Footnote 03 — The List</span>
+        </div>
         <h3>You own the guest list.</h3>
-        <p>One row, one rule. Address, domain, or regex. Edit it like you edit a contact card. No machine learning, no opaque scores.</p>
+        <p>One row, one rule. Address, domain, or regex. Edit it like you edit a contact card. <strong>No machine learning. No opaque scores.</strong></p>
       </article>
     </section>
 
-    <footer class="colophon">
+    <section class="pullquote" aria-label="Quote">
+      <span class="mark" aria-hidden="true">&ldquo;</span>
+      <blockquote>
+        Most email tools work hard to decide things for you.<br />
+        We work hard to give you the decision.
+      </blockquote>
+      <cite>— The Manual, §0</cite>
+    </section>
+
+    <footer class="colophon-bottom">
       <span>zero-spam.email · whitelist-first mail server</span>
-      <span><a href="#">manual</a> &nbsp;·&nbsp; <a href="#">github</a> &nbsp;·&nbsp; <a href="#">privacy</a></span>
+      <span><a href="#">Manual</a> &nbsp;·&nbsp; <a href="#">GitHub</a> &nbsp;·&nbsp; <a href="#">Privacy</a> &nbsp;·&nbsp; <a href="#">Status</a></span>
     </footer>
 
   </div>
