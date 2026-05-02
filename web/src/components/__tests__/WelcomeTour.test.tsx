@@ -15,7 +15,7 @@ import { api } from '../../api';
 describe('WelcomeTour', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(api.tourComplete).mockResolvedValue({ ok: true } as any);
+    vi.mocked(api.tourComplete).mockResolvedValue({ ok: true });
   });
 
   it('renders step 1/4 on mount', () => {

@@ -35,7 +35,7 @@ describe('DomainExpandToast', () => {
   });
 
   it('clicking "Trust everyone" calls api.screenerAllowDomain and shows confirmation', async () => {
-    vi.mocked(api.screenerAllowDomain).mockResolvedValue({ moved: 5 } as any);
+    vi.mocked(api.screenerAllowDomain).mockResolvedValue({ moved: 5, rule_id: 1 });
     const onChanged = vi.fn();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(

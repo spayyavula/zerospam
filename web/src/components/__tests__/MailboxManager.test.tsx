@@ -40,9 +40,9 @@ describe('MailboxManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.mailboxes).mockResolvedValue([fakeMailbox()]);
-    vi.mocked(api.createMailbox).mockResolvedValue({ ok: true, id: 2 } as any);
-    vi.mocked(api.patchMailbox).mockResolvedValue({ ok: true } as any);
-    vi.mocked(api.deleteMailbox).mockResolvedValue({ ok: true } as any);
+    vi.mocked(api.createMailbox).mockResolvedValue({ id: 2 });
+    vi.mocked(api.patchMailbox).mockResolvedValue({ ok: true });
+    vi.mocked(api.deleteMailbox).mockResolvedValue({ ok: true });
   });
   afterEach(() => {
     vi.restoreAllMocks();

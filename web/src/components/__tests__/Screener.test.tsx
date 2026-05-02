@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Screener from '../Screener';
-import type { ScreenerSender } from '../../types';
+import type { MessageSummary, ScreenerSender } from '../../types';
 
 vi.mock('../../api', () => ({
   api: {
@@ -15,20 +15,46 @@ vi.mock('../../api', () => ({
 
 import { api } from '../../api';
 
+function fakeMessage(over: Partial<MessageSummary> = {}): MessageSummary {
+  return {
+    id: 'm1',
+    mailbox_id: 1,
+    folder: 'quarantine',
+    from_address: 'sarah@work.dev',
+    from_name: 'Sarah Q',
+    to_addresses: '["alice@example.com"]',
+    subject: 'Hello',
+    preview: 'preview text',
+    received_at: Date.now(),
+    expires_at: null,
+    read: 0,
+    starred: 0,
+    spf_pass: null,
+    dkim_pass: null,
+    dmarc_pass: null,
+    whitelist_match: null,
+    size_bytes: 0,
+    attachment_count: 0,
+    ...over,
+  };
+}
+
 function senderRow(over: Partial<ScreenerSender> = {}): ScreenerSender {
+  const now = Date.now();
   return {
     address: 'sarah@work.dev',
     name: 'Sarah Q',
     message_count: 2,
     latest_subject: 'Hello',
     latest_preview: 'preview text',
-    latest_received_at: Date.now(),
+    latest_received_at: now,
+    first_received_at: now - 60_000,
     messages: [
-      { id: 'm1', received_at: Date.now(), read: 0, subject: 'Hello', preview: 'preview text' },
-      { id: 'm2', received_at: Date.now() - 60000, read: 1, subject: 'Older', preview: 'older preview' },
+      fakeMessage({ id: 'm1', received_at: now, read: 0, subject: 'Hello', preview: 'preview text' }),
+      fakeMessage({ id: 'm2', received_at: now - 60_000, read: 1, subject: 'Older', preview: 'older preview' }),
     ],
     ...over,
-  } as ScreenerSender;
+  };
 }
 
 describe('Screener', () => {
@@ -70,10 +96,11 @@ describe('Screener', () => {
     vi.mocked(api.screenerList).mockResolvedValue([senderRow()]);
     vi.mocked(api.screenerAllow).mockResolvedValue({
       moved: 2,
+      rule_id: 1,
       sender_address: 'sarah@work.dev',
       domain: 'work.dev',
       suggest_domain_expand: true,
-    } as any);
+    });
     const onChanged = vi.fn();
     const onSuggest = vi.fn();
     const user = userEvent.setup();
@@ -96,10 +123,11 @@ describe('Screener', () => {
     vi.mocked(api.screenerList).mockResolvedValue([senderRow()]);
     vi.mocked(api.screenerAllow).mockResolvedValue({
       moved: 1,
+      rule_id: 1,
       sender_address: 'sarah@work.dev',
       domain: 'work.dev',
       suggest_domain_expand: false,
-    } as any);
+    });
     const onSuggest = vi.fn();
     const user = userEvent.setup();
     render(
@@ -118,7 +146,7 @@ describe('Screener', () => {
 
   it('clicking "No" calls api.screenerReject and onChanged', async () => {
     vi.mocked(api.screenerList).mockResolvedValue([senderRow()]);
-    vi.mocked(api.screenerReject).mockResolvedValue({ trashed: 1 } as any);
+    vi.mocked(api.screenerReject).mockResolvedValue({ trashed: 1 });
     const onChanged = vi.fn();
     const user = userEvent.setup();
     render(
