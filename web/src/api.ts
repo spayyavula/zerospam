@@ -1,213 +1,187 @@
 import type {
   Alias,
   Attachment,
+  AddWhitelistRuleResponse,
+  AddWhitelistRuleRequest,
+  ApiClient,
+  AuthMe,
+  BulkMessagesResponse,
   BulkAction,
+  ChangePasswordRequest,
   ComposeInitial,
   Counts,
+  CreateAliasRequest,
+  CreateAliasResponse,
+  CreateDraftRequest,
+  CreateDraftResponse,
+  CreateMailboxRequest,
+  CreateMailboxResponse,
   Draft,
+  DomainDnsResponse,
+  DomainSummary,
   FolderName,
+  InjectRequest,
+  LoginRequest,
+  LoginResponse,
   Mailbox,
   MessageDetail,
   MessageSummary,
+  MoveFolder,
+  OkResponse,
+  PatchDraftRequest,
+  PatchMailboxRequest,
   ReplyMode,
+  ReplyPrefillResponse,
+  ScreenerAllowDomainResponse,
+  ScreenerAllowResponse,
+  ScreenerRejectResponse,
+  ScreenerSender,
+  SendMessageRequest,
+  SendMessageResponse,
+  SetReadRequest,
+  SetStarredRequest,
+  SignupRequest,
+  SignupResponse,
+  TotpConfirmRequest,
+  TotpDisableRequest,
+  TotpSetupResponse,
   TrackerReport,
   WhitelistRule,
-} from './types';
+} from '@zerospam/shared-api';
+import { ApiError, createApiClient } from '@zerospam/shared-api';
 
-async function j<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
-  // Only declare Content-Type when there's actually a body. Fastify rejects
-  // POSTs that announce JSON but send nothing (FST_ERR_CTP_EMPTY_JSON_BODY).
-  const headers: Record<string, string> = init?.body != null
-    ? { 'Content-Type': 'application/json', ...((init?.headers as Record<string, string>) ?? {}) }
-    : { ...((init?.headers as Record<string, string>) ?? {}) };
-  const r = await fetch(input, {
-    credentials: 'include',
-    ...init,
-    headers,
+const client: ApiClient = createApiClient({
+  credentials: 'include',
+  fetch: (input, init) => globalThis.fetch(input, init),
+});
+
+function handle<T>(promise: Promise<T>): Promise<T> {
+  return promise.catch((error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      throw Object.assign(new Error('unauthorized'), { status: 401, data: error.data });
+    }
+    throw error;
   });
-  if (r.status === 401) {
-    // Surface a typed signal that the App can catch.
-    throw Object.assign(new Error('unauthorized'), { status: 401 });
-  }
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  if (r.status === 204) return undefined as T;
-  return r.json() as Promise<T>;
 }
 
 export const api = {
   // mailboxes
-  mailboxes: () => j<Mailbox[]>('/api/mailboxes'),
-  createMailbox: (b: { address: string; displayName?: string; quarantineTtlHours?: number }) =>
-    j<{ id: number }>('/api/mailboxes', { method: 'POST', body: JSON.stringify(b) }),
-  patchMailbox: (
-    id: number,
-    b: {
-      displayName?: string | null;
-      quarantineTtlHours?: number;
-      digestEnabled?: boolean;
-      digestHour?: number;
-      digestRecipientMode?: 'external' | 'loopback';
-      ownerEmail?: string | null;
-    },
-  ) => j<{ ok: true }>(`/api/mailboxes/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
+  mailboxes: () => handle(client.get<Mailbox[]>('/api/mailboxes')),
+  createMailbox: (b: CreateMailboxRequest) =>
+    handle(client.post<CreateMailboxResponse>('/api/mailboxes', b)),
+  patchMailbox: (id: number, b: PatchMailboxRequest) =>
+    handle(client.patch<OkResponse>(`/api/mailboxes/${id}`, b)),
   deleteMailbox: (id: number) =>
-    j<{ ok: true }>(`/api/mailboxes/${id}`, { method: 'DELETE' }),
-  counts: (mailboxId: number) => j<Counts>(`/api/mailboxes/${mailboxId}/counts`),
+    handle(client.delete<OkResponse>(`/api/mailboxes/${id}`)),
+  counts: (mailboxId: number) => handle(client.get<Counts>(`/api/mailboxes/${mailboxId}/counts`)),
+
+  // screener
+  screenerList: (mailboxId: number) =>
+    handle(client.get<ScreenerSender[]>(`/api/screener?mailbox_id=${mailboxId}`)),
+  screenerAllow: (mailboxId: number, senderAddress: string) =>
+    handle(client.post<ScreenerAllowResponse>(`/api/screener/allow`, {
+      mailbox_id: mailboxId,
+      sender_address: senderAddress,
+    })),
+  screenerAllowDomain: (mailboxId: number, domain: string) =>
+    handle(client.post<ScreenerAllowDomainResponse>(`/api/screener/allow-domain`, {
+      mailbox_id: mailboxId,
+      domain,
+    })),
+  screenerReject: (mailboxId: number, senderAddress: string) =>
+    handle(client.post<ScreenerRejectResponse>(`/api/screener/reject`, {
+      mailbox_id: mailboxId,
+      sender_address: senderAddress,
+    })),
 
   // messages
   list: (mailboxId: number, folder: FolderName) =>
-    j<MessageSummary[]>(`/api/messages?mailboxId=${mailboxId}&folder=${folder}`),
-  get: (id: string) => j<MessageDetail>(`/api/messages/${id}`),
+    handle(client.get<MessageSummary[]>(`/api/messages?mailboxId=${mailboxId}&folder=${folder}`)),
+  get: (id: string) => handle(client.get<MessageDetail>(`/api/messages/${id}`)),
   search: (mailboxId: number, q: string, folder?: FolderName) => {
     const params = new URLSearchParams({ mailboxId: String(mailboxId), q });
     if (folder) params.set('folder', folder);
-    return j<MessageSummary[]>(`/api/search?${params.toString()}`);
+    return handle(client.get<MessageSummary[]>(`/api/search?${params.toString()}`));
   },
   setRead: (id: string, read: boolean) =>
-    j<{ ok: true }>(`/api/messages/${id}/read`, {
-      method: 'POST',
-      body: JSON.stringify({ read }),
-    }),
+    handle(client.post<OkResponse>(`/api/messages/${id}/read`, { read } satisfies SetReadRequest)),
   setStarred: (id: string, starred: boolean) =>
-    j<{ ok: true }>(`/api/messages/${id}/star`, {
-      method: 'POST',
-      body: JSON.stringify({ starred }),
-    }),
-  move: (id: string, folder: 'inbox' | 'quarantine' | 'trash') =>
-    j<{ ok: true }>(`/api/messages/${id}/move`, {
-      method: 'POST',
-      body: JSON.stringify({ folder }),
-    }),
+    handle(client.post<OkResponse>(`/api/messages/${id}/star`, { starred } satisfies SetStarredRequest)),
+  move: (id: string, folder: MoveFolder) =>
+    handle(client.post<OkResponse>(`/api/messages/${id}/move`, { folder })),
   trustSender: (id: string) =>
-    j<{ ok: true }>(`/api/messages/${id}/trust-sender`, { method: 'POST' }),
-  remove: (id: string) => j<{ ok: true }>(`/api/messages/${id}`, { method: 'DELETE' }),
+    handle(client.post<OkResponse>(`/api/messages/${id}/trust-sender`)),
+  remove: (id: string) => handle(client.delete<OkResponse>(`/api/messages/${id}`)),
   bulk: (ids: string[], action: BulkAction) =>
-    j<{ ok: true; affected: number }>(`/api/messages/bulk`, {
-      method: 'POST',
-      body: JSON.stringify({ ids, action }),
-    }),
+    handle(client.post<BulkMessagesResponse>(`/api/messages/bulk`, { ids, action })),
   purgeQuarantine: (mailboxId: number) =>
-    j<{ ok: true; purged: number }>(`/api/quarantine/${mailboxId}/purge`, { method: 'POST' }),
+    handle(client.post<{ ok: true; purged: number }>(`/api/quarantine/${mailboxId}/purge`)),
 
   // attachments
   attachments: (messageId: string) =>
-    j<Attachment[]>(`/api/messages/${messageId}/attachments`),
+    handle(client.get<Attachment[]>(`/api/messages/${messageId}/attachments`)),
   attachmentDownloadUrl: (id: number) => `/api/attachments/${id}/download`,
 
   // trackers + image proxy
-  trackers: (messageId: string) => j<TrackerReport>(`/api/messages/${messageId}/trackers`),
+  trackers: (messageId: string) => handle(client.get<TrackerReport>(`/api/messages/${messageId}/trackers`)),
   proxyImageUrl: (url: string) => `/api/proxy/image?url=${encodeURIComponent(url)}`,
 
   // aliases
-  listAliases: (mailboxId: number) => j<Alias[]>(`/api/aliases?mailboxId=${mailboxId}`),
-  createAlias: (b: {
-    mailboxId: number;
-    label?: string;
-    localPart?: string;
-    expiresInDays?: number | null;
-  }) =>
-    j<{ id: number; address: string; expires_at: number | null }>(`/api/aliases`, {
-      method: 'POST',
-      body: JSON.stringify(b),
-    }),
+  listAliases: (mailboxId: number) => handle(client.get<Alias[]>(`/api/aliases?mailboxId=${mailboxId}`)),
+  createAlias: (b: CreateAliasRequest) =>
+    handle(client.post<CreateAliasResponse>(`/api/aliases`, b)),
   abuseAlias: (id: number) =>
-    j<{ ok: true }>(`/api/aliases/${id}/abuse`, { method: 'POST' }),
+    handle(client.post<OkResponse>(`/api/aliases/${id}/abuse`)),
   restoreAlias: (id: number) =>
-    j<{ ok: true }>(`/api/aliases/${id}/restore`, { method: 'POST' }),
-  deleteAlias: (id: number) => j<{ ok: true }>(`/api/aliases/${id}`, { method: 'DELETE' }),
+    handle(client.post<OkResponse>(`/api/aliases/${id}/restore`)),
+  deleteAlias: (id: number) => handle(client.delete<OkResponse>(`/api/aliases/${id}`)),
 
   // whitelist
   whitelist: (mailboxId: number) =>
-    j<WhitelistRule[]>(`/api/whitelist?mailboxId=${mailboxId}`),
-  addRule: (rule: { mailboxId: number; kind: 'address' | 'domain' | 'regex'; pattern: string; note?: string }) =>
-    j<{ id: number }>(`/api/whitelist`, { method: 'POST', body: JSON.stringify(rule) }),
+    handle(client.get<WhitelistRule[]>(`/api/whitelist?mailboxId=${mailboxId}`)),
+  addRule: (rule: AddWhitelistRuleRequest) =>
+    handle(client.post<AddWhitelistRuleResponse>(`/api/whitelist`, rule)),
   removeRule: (id: number) =>
-    j<{ ok: true }>(`/api/whitelist/${id}`, { method: 'DELETE' }),
+    handle(client.delete<OkResponse>(`/api/whitelist/${id}`)),
 
   // send (Phase 2)
-  send: (body: {
-    mailboxId: number;
-    to: string[];
-    cc?: string[];
-    bcc?: string[];
-    subject: string;
-    text?: string;
-    html?: string;
-    inReplyTo?: string | null;
-    references?: string | null;
-  }) =>
-    j<{ messageId: string; recipients: string[]; signed: boolean; whitelistAdded: number }>(
-      `/api/send`,
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
+  send: (body: SendMessageRequest) =>
+    handle(client.post<SendMessageResponse>(`/api/send`, body)),
 
   // reply prefill
   replyPrefill: (id: string, mode: ReplyMode) =>
-    j<ComposeInitial & { mode: ReplyMode }>(`/api/messages/${id}/reply?mode=${mode}`),
+    handle(client.get<ReplyPrefillResponse>(`/api/messages/${id}/reply?mode=${mode}`)),
 
   // drafts
-  listDrafts: (mailboxId: number) => j<Draft[]>(`/api/drafts?mailboxId=${mailboxId}`),
-  getDraft: (id: string) => j<Draft>(`/api/drafts/${id}`),
-  createDraft: (b: {
-    mailboxId: number;
-    to?: string[];
-    cc?: string[];
-    bcc?: string[];
-    subject?: string;
-    text?: string;
-    html?: string;
-    inReplyTo?: string | null;
-    references?: string | null;
-    replyToMessageId?: string | null;
-  }) => j<{ id: string }>(`/api/drafts`, { method: 'POST', body: JSON.stringify(b) }),
-  patchDraft: (
-    id: string,
-    b: {
-      to?: string[];
-      cc?: string[];
-      bcc?: string[];
-      subject?: string;
-      text?: string;
-      html?: string;
-    },
-  ) => j<{ ok: true }>(`/api/drafts/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
-  deleteDraft: (id: string) => j<{ ok: true }>(`/api/drafts/${id}`, { method: 'DELETE' }),
+  listDrafts: (mailboxId: number) => handle(client.get<Draft[]>(`/api/drafts?mailboxId=${mailboxId}`)),
+  getDraft: (id: string) => handle(client.get<Draft>(`/api/drafts/${id}`)),
+  createDraft: (b: CreateDraftRequest) => handle(client.post<CreateDraftResponse>(`/api/drafts`, b)),
+  patchDraft: (id: string, b: PatchDraftRequest) =>
+    handle(client.patch<OkResponse>(`/api/drafts/${id}`, b)),
+  deleteDraft: (id: string) => handle(client.delete<OkResponse>(`/api/drafts/${id}`)),
   sendDraft: (id: string) =>
-    j<{ messageId: string; recipients: string[]; signed: boolean; whitelistAdded: number }>(
-      `/api/drafts/${id}/send`,
-      { method: 'POST' },
-    ),
+    handle(client.post<SendMessageResponse>(`/api/drafts/${id}/send`)),
 
   // domains / DKIM
   domains: () =>
-    j<Array<{ id: number; name: string; created_at: number; dkim_selector: string | null; dkim_public_pem: string | null }>>(
-      '/api/domains',
-    ),
+    handle(client.get<DomainSummary[]>('/api/domains')),
   domainDns: (id: number) =>
-    j<{ host: string; type: 'TXT'; value: string; copyPaste: string }>(`/api/domains/${id}/dns`),
+    handle(client.get<DomainDnsResponse>(`/api/domains/${id}/dns`)),
 
   // dev: simulate inbound
-  inject: (body: { to: string; from: string; fromName?: string; subject: string; text: string }) =>
-    j(`/api/inject`, { method: 'POST', body: JSON.stringify(body) }),
+  inject: (body: InjectRequest) => handle(client.post<unknown>(`/api/inject`, body)),
 
   // auth
-  signup: (b: { email: string; password: string; username: string }) =>
-    j<{ userId: number; accountId: number }>('/api/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify(b),
-    }),
-  authMe: () => j<{ user: { id: number; email: string; totp_enabled: boolean } }>('/api/auth/me'),
-  authLogin: (b: { email: string; password: string; totp?: string }) =>
-    j<{ ok: true } | { needs_totp: true }>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(b),
-    }),
-  authLogout: () => j<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
-  authChangePassword: (b: { currentPassword: string; newPassword: string }) =>
-    j<{ ok: true }>('/api/auth/password', { method: 'POST', body: JSON.stringify(b) }),
-  totpSetup: () => j<{ secret: string; otpauth_url: string }>('/api/auth/totp/setup', { method: 'POST' }),
-  totpConfirm: (b: { code: string }) => j<{ ok: true }>('/api/auth/totp/confirm', { method: 'POST', body: JSON.stringify(b) }),
-  totpDisable: (b: { password: string }) => j<{ ok: true }>('/api/auth/totp', { method: 'DELETE', body: JSON.stringify(b) }),
+  signup: (b: SignupRequest) => handle(client.post<SignupResponse>('/api/auth/signup', b)),
+  authMe: () => handle(client.get<AuthMe>('/api/auth/me')),
+  authLogin: (b: LoginRequest) => handle(client.post<LoginResponse>('/api/auth/login', b)),
+  authLogout: () => handle(client.post<OkResponse>('/api/auth/logout')),
+  authChangePassword: (b: ChangePasswordRequest) =>
+    handle(client.post<OkResponse>('/api/auth/password', b)),
+  tourComplete: () => handle(client.post<OkResponse>('/api/users/me/tour-complete')),
+  totpSetup: () => handle(client.post<TotpSetupResponse>('/api/auth/totp/setup')),
+  totpConfirm: (b: TotpConfirmRequest) => handle(client.post<OkResponse>('/api/auth/totp/confirm', b)),
+  totpDisable: (b: TotpDisableRequest) => handle(client.delete<OkResponse>('/api/auth/totp', { body: b })),
 };
 
 export function subscribeEvents(onEvent: (e: any) => void): () => void {
