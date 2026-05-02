@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZeroSpam — Favicon
+  16-32px tuned. Rounded ink square with cream uppercase italic "Z" cut out,
+  yellow dot upper-right. Uppercase + heavier weight chosen because the
+  lowercase italic z's descender curl turns to mush below 24px.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 32 32"
+     width="32" height="32"
+     role="img"
+     aria-label="ZeroSpam">
+  <title>ZeroSpam</title>
+  <defs>
+    <style>
+      .zs-favicon-letter {
+        font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+        font-weight: 600;
+        font-style: italic;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+      }
+    </style>
+    <mask id="zs-favicon-cut">
+      <rect width="32" height="32" fill="white"/>
+      <text class="zs-favicon-letter" x="14" y="24" text-anchor="middle" fill="black">Z</text>
+    </mask>
+  </defs>
+
+  <!-- Ink rounded square with the Z cut out -->
+  <rect x="0" y="0" width="32" height="32" rx="3" ry="3" fill="#0A0A0A" mask="url(#zs-favicon-cut)"/>
+
+  <!-- Yellow dot: upper-right inside the square, sized for visibility at 16px -->
+  <circle cx="25" cy="8" r="2.6" fill="#FFD52E"/>
+</svg>

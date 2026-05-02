@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZeroSpam — Seal
+  Solid ink disc with italic lowercase "z" cut out (the cream paper of the
+  host surface shows through), plus a yellow dot positioned lower-right
+  inside the disc. Use as the brand stamp; for app icons, wrap in a 22%
+  rounded square at the platform's icon canvas size.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 400 400"
+     width="400" height="400"
+     role="img"
+     aria-label="ZeroSpam">
+  <title>ZeroSpam (seal)</title>
+  <defs>
+    <style>
+      .zs-seal-letter {
+        font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+        font-weight: 500;
+        font-style: italic;
+        font-size: 280px;
+        letter-spacing: -0.01em;
+      }
+    </style>
+    <!--
+      Mask: white where the disc fully renders, black where the z cuts through.
+      The z is rendered in black inside the mask, which means those pixels of
+      the disc become transparent — revealing the host surface behind.
+    -->
+    <mask id="zs-seal-cut">
+      <rect width="400" height="400" fill="white"/>
+      <text class="zs-seal-letter" x="200" y="280" text-anchor="middle" fill="black">z</text>
+    </mask>
+  </defs>
+
+  <!-- Ink disc with cut-out z -->
+  <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#zs-seal-cut)"/>
+
+  <!-- Yellow dot: anchored lower-right inside the disc, away from the z cut-out -->
+  <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+</svg>

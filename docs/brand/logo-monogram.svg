@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZeroSpam — Monogram
+  Lowercase italic "z" + yellow dot. Used in tight horizontal slots, CLI splash,
+  condensed UI lockups. This is a reference SVG; final production assets need
+  the glyph outlined to a path so renderers without Source Serif 4 fall back
+  gracefully.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 200 200"
+     width="200" height="200"
+     role="img"
+     aria-label="ZeroSpam">
+  <title>ZeroSpam (monogram)</title>
+  <defs>
+    <style>
+      .zs-mono {
+        font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+        font-weight: 500;
+        font-style: italic;
+        font-size: 220px;
+        letter-spacing: -0.01em;
+        fill: #0A0A0A;
+      }
+    </style>
+  </defs>
+
+  <!-- Lowercase italic z, optically centered (italic lean nudges it slightly left of geometric center) -->
+  <text class="zs-mono" x="78" y="148" text-anchor="middle">z</text>
+
+  <!-- Yellow dot — baseline-right of the z, sized to match the wordmark dot proportion -->
+  <circle cx="148" cy="142" r="11" fill="#FFD52E"/>
+</svg>

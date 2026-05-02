@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZeroSpam — Logo System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&family=Geist:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ── tokens ─────────────────────────────────────────────────────────── */
+    :root {
+      --paper:        #FBF8F1;
+      --paper-deep:   #F5EFE3;
+      --ink:          #0A0A0A;
+      --ink-soft:     #2A2A2A;
+      --quiet:        #6B6863;
+      --rule:         #E8E1D2;
+      --rule-strong:  #1F1F1F;
+      --signal:       #FFD52E;
+      --signal-deep:  #E8B800;
+      --danger:       #B53C2F;
+
+      --font-display: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+      --font-body:    'Geist', 'Helvetica Neue', system-ui, sans-serif;
+      --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+      --margin: clamp(40px, 6vw, 120px);
+      --gutter: 28px;
+      --rule-w: 1px;
+      --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+    body {
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink-soft);
+      font-family: var(--font-body);
+      font-weight: 400;
+      font-size: 16px;
+      line-height: 1.6;
+      font-feature-settings: 'ss01' on;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.05;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    .frame {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 0 var(--margin);
+    }
+
+    /* ── masthead ──────────────────────────────────────────────────────── */
+    .masthead {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      padding-top: clamp(28px, 4vw, 44px);
+      padding-bottom: 18px;
+      border-bottom: var(--rule-w) solid var(--rule);
+      gap: 32px;
+    }
+
+    .masthead .wordmark-inline {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 500;
+      font-size: clamp(30px, 3.4vw, 40px);
+      line-height: 1;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      display: inline-flex;
+      align-items: baseline;
+    }
+    .wordmark-inline .dot {
+      display: inline-block;
+      width: 0.16em;
+      height: 0.16em;
+      margin: 0 0.06em;
+      border-radius: 50%;
+      background: var(--signal);
+      transform: translateY(-0.04em);
+    }
+
+    .colophon-top {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      text-align: right;
+      align-self: end;
+      line-height: 1.6;
+    }
+    .colophon-top span + span::before {
+      content: " · ";
+      margin: 0 0.45em;
+      color: var(--rule);
+    }
+
+    /* ── intro ────────────────────────────────────────────────────────── */
+    .intro {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+      padding-top: clamp(56px, 8vw, 96px);
+      padding-bottom: clamp(48px, 6vw, 72px);
+    }
+    .intro-eyebrow {
+      grid-column: 1 / span 12;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .intro-eyebrow::before {
+      content: "";
+      width: 32px;
+      height: var(--rule-w);
+      background: var(--ink);
+    }
+    .intro-headline {
+      grid-column: 1 / span 12;
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(48px, 7.5vw, 104px);
+      line-height: 0.98;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin: 0 0 28px;
+      text-wrap: balance;
+    }
+    .intro-lede {
+      grid-column: 4 / span 7;
+      font-family: var(--font-display);
+      font-size: clamp(18px, 1.5vw, 21px);
+      line-height: 1.5;
+      color: var(--ink);
+      margin: 0;
+      max-width: 60ch;
+    }
+    .intro-lede strong { font-weight: 500; }
+
+    /* ── section divider ──────────────────────────────────────────────── */
+    .section-rule {
+      position: relative;
+      height: 1px;
+      background: var(--rule-strong);
+      margin: clamp(72px, 9vw, 100px) 0 clamp(40px, 5vw, 56px);
+    }
+    .section-rule .label {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--paper);
+      padding-right: 18px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .section-rule .label .square {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--signal);
+      margin-right: 12px;
+      transform: translateY(-1px);
+    }
+    .section-rule .meta {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--paper);
+      padding-left: 18px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    /* ── section ──────────────────────────────────────────────────────── */
+    .section { padding-bottom: clamp(48px, 6vw, 72px); }
+    .section h2 {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(40px, 5vw, 56px);
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      margin: 0 0 12px;
+    }
+    .section p.lede {
+      font-family: var(--font-display);
+      font-size: clamp(17px, 1.3vw, 19px);
+      line-height: 1.5;
+      color: var(--quiet);
+      margin: 0 0 36px;
+      max-width: 64ch;
+    }
+
+    /* ── plate (where logos live) ─────────────────────────────────────── */
+    .plate {
+      background: var(--paper-deep);
+      border: 1px solid var(--rule);
+      padding: clamp(28px, 4vw, 56px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: clamp(28px, 4vw, 56px);
+      position: relative;
+      min-height: 200px;
+    }
+    .plate.dark {
+      background: var(--ink);
+      border-color: var(--ink);
+    }
+    .plate.yellow {
+      background: var(--signal);
+      border-color: var(--signal-deep);
+    }
+
+    .plate .caption {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+    .plate.dark .caption { color: rgba(255,255,255,0.4); }
+    .plate.yellow .caption { color: rgba(10,10,10,0.55); }
+
+    /* ── grid for size ladders ────────────────────────────────────────── */
+    .ladder {
+      display: grid;
+      gap: clamp(20px, 2.5vw, 36px);
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      align-items: end;
+    }
+    .ladder-item {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 24px;
+      border: 1px solid var(--rule);
+      background: var(--paper);
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .ladder-item .label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    /* ── inline wordmark — for showing at multiple sizes ───────────────── */
+    .wm {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-style: italic;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      display: inline-flex;
+      align-items: baseline;
+      line-height: 1;
+    }
+    .wm .dot {
+      display: inline-block;
+      width: 0.18em;
+      height: 0.18em;
+      margin: 0 0.18em;
+      border-radius: 50%;
+      background: var(--signal);
+      transform: translateY(-0.18em);
+    }
+    .wm.dark { color: var(--paper); }
+    .wm.yellow .dot { background: var(--ink); }
+    .wm-xs { font-size: 18px; }
+    .wm-s  { font-size: 28px; }
+    .wm-m  { font-size: 48px; }
+    .wm-l  { font-size: 84px; }
+    .wm-xl { font-size: clamp(80px, 12vw, 156px); }
+
+    /* ── inline monogram ───────────────────────────────────────────────── */
+    .mg {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-style: italic;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      display: inline-flex;
+      align-items: baseline;
+      line-height: 1;
+    }
+    .mg .dot {
+      display: inline-block;
+      width: 0.18em;
+      height: 0.18em;
+      margin-left: 0.14em;
+      border-radius: 50%;
+      background: var(--signal);
+      transform: translateY(0);
+    }
+    .mg-s  { font-size: 32px; }
+    .mg-m  { font-size: 64px; }
+    .mg-l  { font-size: 128px; }
+    .mg-xl { font-size: 220px; }
+
+    /* ── seal — embedded SVG with masking ──────────────────────────────── */
+    .seal-wrap { display: inline-flex; align-items: center; justify-content: center; }
+    .seal {
+      display: block;
+    }
+
+    /* ── app icon platforms ───────────────────────────────────────────── */
+    .app-icons {
+      display: flex;
+      gap: clamp(20px, 3vw, 40px);
+      align-items: end;
+      flex-wrap: wrap;
+    }
+    .app-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-icon .platform {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+    .app-icon .canvas {
+      background: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px -12px rgba(0,0,0,0.25);
+    }
+    .app-icon .canvas svg { display: block; }
+    .app-icon-180 .canvas { width: 180px; height: 180px; border-radius: 40px; }
+    .app-icon-120 .canvas { width: 120px; height: 120px; border-radius: 26px; }
+    .app-icon-72  .canvas { width: 72px;  height: 72px;  border-radius: 16px; }
+
+    /* ── favicon mockup ───────────────────────────────────────────────── */
+    .fav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--paper-deep);
+      padding: 10px 18px 10px 14px;
+      border: 1px solid var(--rule);
+      border-radius: 8px 8px 0 0;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--ink-soft);
+      max-width: 280px;
+    }
+    .fav-tab img { width: 16px; height: 16px; flex-shrink: 0; }
+    .fav-tab .x {
+      margin-left: auto;
+      width: 14px;
+      height: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--quiet);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .fav-ladder {
+      display: flex;
+      gap: 32px;
+      align-items: flex-end;
+      margin-top: 32px;
+    }
+    .fav-ladder .item {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    .fav-ladder .item .label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+    .fav-ladder img { display: block; image-rendering: -webkit-optimize-contrast; }
+
+    /* ── lockups ──────────────────────────────────────────────────────── */
+    .lockup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    @media (max-width: 880px) { .lockup-grid { grid-template-columns: 1fr; } }
+
+    .lockup-card {
+      background: var(--paper-deep);
+      border: 1px solid var(--rule);
+      padding: clamp(36px, 5vw, 64px);
+      min-height: 320px;
+      position: relative;
+    }
+    .lockup-card .caption {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    /* stacked lockup */
+    .lockup-stacked {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      text-align: center;
+    }
+    .lockup-stacked .rule {
+      width: 120px;
+      height: 1px;
+      background: var(--rule-strong);
+    }
+    .lockup-stacked .tagline {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    /* horizontal lockup */
+    .lockup-horizontal {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .lockup-horizontal .text-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .lockup-horizontal .rule-h {
+      width: 140px;
+      height: 1px;
+      background: var(--rule-strong);
+    }
+    .lockup-horizontal .tagline {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    /* ── social card ──────────────────────────────────────────────────── */
+    .social-card {
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 1200 / 630;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(36px, 5vw, 72px);
+    }
+    .social-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.05;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+    .social-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .social-card-headline {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(40px, 5.5vw, 76px);
+      line-height: 1.0;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      max-width: 18ch;
+      margin: 0;
+    }
+    .social-card-headline em { font-style: normal; color: var(--quiet); }
+    .social-card-headline .accent { position: relative; }
+    .social-card-headline .accent::after {
+      content: "";
+      position: absolute;
+      left: -0.02em; right: -0.02em;
+      bottom: 0.08em;
+      height: 0.18em;
+      background: var(--signal);
+      z-index: -1;
+    }
+    .social-card-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+    .social-card-foot .url { color: var(--ink); }
+
+    /* ── don'ts ───────────────────────────────────────────────────────── */
+    .donts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0;
+      border-top: 1px solid var(--rule);
+      border-left: 1px solid var(--rule);
+    }
+    .dont {
+      padding: 28px;
+      border-right: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .dont .x-mark {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--danger);
+      color: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .dont .demo {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+    }
+    .dont .desc {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      max-width: 24ch;
+    }
+
+    /* ── colophon ─────────────────────────────────────────────────────── */
+    .colophon-bottom {
+      padding: 28px 0 40px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      border-top: var(--rule-w) solid var(--rule);
+      flex-wrap: wrap;
+    }
+
+    /* ── reduced motion is default — this page has no animations ──────── */
+  </style>
+</head>
+<body>
+  <div class="frame">
+
+    <!-- MASTHEAD -->
+    <header class="masthead">
+      <div class="wordmark-inline" aria-label="ZeroSpam">
+        Zero<span class="dot" aria-hidden="true"></span>Spam
+      </div>
+      <div class="colophon-top">
+        <span>est. mmxxvi</span><span>brand book</span><span>logo system v1</span>
+      </div>
+    </header>
+
+    <!-- INTRO -->
+    <section class="intro">
+      <div class="intro-eyebrow">
+        <span>The Stamp — A Logo System</span>
+      </div>
+      <h1 class="intro-headline">
+        One idea, four <em>stamps</em>.
+      </h1>
+      <p class="intro-lede">
+        ZeroSpam's logo is the wordmark, the wordmark is the brand, and the brand is the
+        <strong>yellow dot</strong>. The four variants below are the same idea at different
+        sizes — italic Source Serif and that single dot, scaled and cut to fit.
+        Don't add a fifth.
+      </p>
+    </section>
+
+    <!-- ── 01 WORDMARK ─────────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>01 — The Wordmark</span>
+      <span class="meta">primary · horizontal</span>
+    </div>
+
+    <section class="section">
+      <h2>Zero<span style="display:inline-block;width:0.18em;height:0.18em;margin:0 0.16em;border-radius:50%;background:var(--signal);transform:translateY(-0.2em);"></span>Spam</h2>
+      <p class="lede">
+        The master mark. Source Serif 4 Italic, weight 500. Yellow dot punctuates the brand
+        in place of a U+00B7 — but rendered as a circle, not a glyph, so it stays perfectly
+        round at any scale. Use it horizontally with at least 18px of cap height.
+      </p>
+
+      <div class="plate">
+        <span class="wm wm-xl" aria-label="ZeroSpam">Zero<span class="dot" aria-hidden="true"></span>Spam</span>
+        <span class="caption">on cream paper · primary surface</span>
+      </div>
+
+      <div style="height:32px"></div>
+
+      <div class="plate dark">
+        <span class="wm wm-xl dark" aria-label="ZeroSpam">Zero<span class="dot" aria-hidden="true"></span>Spam</span>
+        <span class="caption">on ink · reversed</span>
+      </div>
+
+      <div style="height:32px"></div>
+
+      <div class="plate yellow">
+        <span class="wm wm-xl yellow" aria-label="ZeroSpam" style="color:var(--ink)">Zero<span class="dot" aria-hidden="true"></span>Spam</span>
+        <span class="caption">on yellow · dot becomes ink</span>
+      </div>
+
+      <div style="height:48px"></div>
+
+      <h3 style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--quiet);margin:0 0 24px">Size ladder</h3>
+
+      <div class="ladder">
+        <div class="ladder-item">
+          <span class="wm wm-l">Zero<span class="dot"></span>Spam</span>
+          <span class="label">84 px</span>
+        </div>
+        <div class="ladder-item">
+          <span class="wm wm-m">Zero<span class="dot"></span>Spam</span>
+          <span class="label">48 px</span>
+        </div>
+        <div class="ladder-item">
+          <span class="wm wm-s">Zero<span class="dot"></span>Spam</span>
+          <span class="label">28 px</span>
+        </div>
+        <div class="ladder-item">
+          <span class="wm wm-xs">Zero<span class="dot"></span>Spam</span>
+          <span class="label">18 px · min</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 02 MONOGRAM ─────────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>02 — The Monogram</span>
+      <span class="meta">tight horizontal · cli</span>
+    </div>
+
+    <section class="section">
+      <h2>z<span style="display:inline-block;width:0.18em;height:0.18em;margin-left:0.14em;border-radius:50%;background:var(--signal);transform:translateY(0);"></span></h2>
+      <p class="lede">
+        For places where the full wordmark won't fit. Lowercase italic z reads as
+        "z[ero]." — the period is the dot. Always lowercase, always italic. Use it
+        in a sidebar collapse state, the CLI splash, an email signature footer.
+      </p>
+
+      <div class="plate">
+        <span class="mg mg-xl" aria-label="ZeroSpam (monogram)">z<span class="dot" aria-hidden="true"></span></span>
+        <span class="caption">220 px · brand stamp scale</span>
+      </div>
+
+      <div style="height:48px"></div>
+
+      <h3 style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--quiet);margin:0 0 24px">Size ladder</h3>
+
+      <div class="ladder">
+        <div class="ladder-item">
+          <span class="mg mg-l">z<span class="dot"></span></span>
+          <span class="label">128 px</span>
+        </div>
+        <div class="ladder-item">
+          <span class="mg mg-m">z<span class="dot"></span></span>
+          <span class="label">64 px</span>
+        </div>
+        <div class="ladder-item">
+          <span class="mg mg-s">z<span class="dot"></span></span>
+          <span class="label">32 px · min</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 03 SEAL ──────────────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>03 — The Seal</span>
+      <span class="meta">brand stamp · app icon</span>
+    </div>
+
+    <section class="section">
+      <h2><em>The cut-out seal.</em></h2>
+      <p class="lede">
+        A solid ink disc with the lowercase italic z cut through to whatever surface
+        is behind. The yellow dot lives inside the disc, anchored lower-right.
+        On cream paper the z reads cream. On dark surfaces, swap to the reversed seal.
+      </p>
+
+      <div class="plate">
+        <!-- inline seal SVG — large -->
+        <svg class="seal" viewBox="0 0 400 400" width="240" height="240" role="img" aria-label="ZeroSpam seal">
+          <defs>
+            <mask id="seal-mask-1">
+              <rect width="400" height="400" fill="white"/>
+              <text x="200" y="280" text-anchor="middle"
+                    style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                    fill="black">z</text>
+            </mask>
+          </defs>
+          <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#seal-mask-1)"/>
+          <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+        </svg>
+        <span class="caption">on cream · default</span>
+      </div>
+
+      <div style="height:32px"></div>
+
+      <div class="plate dark">
+        <!-- reversed seal: cream disc, ink z, ink dot -->
+        <svg class="seal" viewBox="0 0 400 400" width="240" height="240" role="img" aria-label="ZeroSpam seal (reversed)">
+          <defs>
+            <mask id="seal-mask-2">
+              <rect width="400" height="400" fill="white"/>
+              <text x="200" y="280" text-anchor="middle"
+                    style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                    fill="black">z</text>
+            </mask>
+          </defs>
+          <circle cx="200" cy="200" r="180" fill="#FBF8F1" mask="url(#seal-mask-2)"/>
+          <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+        </svg>
+        <span class="caption">on ink · reversed (yellow dot retained)</span>
+      </div>
+
+      <div style="height:32px"></div>
+
+      <div class="plate yellow">
+        <!-- monochrome seal: ink disc, cream z, ink dot (no yellow on yellow) -->
+        <svg class="seal" viewBox="0 0 400 400" width="240" height="240" role="img" aria-label="ZeroSpam seal (monochrome)">
+          <defs>
+            <mask id="seal-mask-3">
+              <rect width="400" height="400" fill="white"/>
+              <text x="200" y="280" text-anchor="middle"
+                    style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                    fill="black">z</text>
+            </mask>
+          </defs>
+          <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#seal-mask-3)"/>
+          <circle cx="298" cy="262" r="16" fill="#0A0A0A"/>
+        </svg>
+        <span class="caption">on yellow · dot becomes ink</span>
+      </div>
+
+      <div style="height:48px"></div>
+
+      <h3 style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--quiet);margin:0 0 24px">App icon — rounded square wrappers</h3>
+
+      <div class="app-icons">
+        <div class="app-icon app-icon-180">
+          <div class="canvas">
+            <svg viewBox="0 0 400 400" width="120" height="120">
+              <defs>
+                <mask id="app-mask-1">
+                  <rect width="400" height="400" fill="white"/>
+                  <text x="200" y="280" text-anchor="middle"
+                        style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                        fill="black">z</text>
+                </mask>
+              </defs>
+              <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#app-mask-1)"/>
+              <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+            </svg>
+          </div>
+          <span class="platform">180 · iPhone</span>
+        </div>
+        <div class="app-icon app-icon-120">
+          <div class="canvas">
+            <svg viewBox="0 0 400 400" width="80" height="80">
+              <defs>
+                <mask id="app-mask-2">
+                  <rect width="400" height="400" fill="white"/>
+                  <text x="200" y="280" text-anchor="middle"
+                        style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                        fill="black">z</text>
+                </mask>
+              </defs>
+              <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#app-mask-2)"/>
+              <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+            </svg>
+          </div>
+          <span class="platform">120 · iPad</span>
+        </div>
+        <div class="app-icon app-icon-72">
+          <div class="canvas">
+            <svg viewBox="0 0 400 400" width="48" height="48">
+              <defs>
+                <mask id="app-mask-3">
+                  <rect width="400" height="400" fill="white"/>
+                  <text x="200" y="280" text-anchor="middle"
+                        style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                        fill="black">z</text>
+                </mask>
+              </defs>
+              <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#app-mask-3)"/>
+              <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+            </svg>
+          </div>
+          <span class="platform">72 · notification</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 04 FAVICON ──────────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>04 — The Favicon</span>
+      <span class="meta">browser chrome · 16-32 px</span>
+    </div>
+
+    <section class="section">
+      <h2>The pixel-tuned variant.</h2>
+      <p class="lede">
+        At favicon scale, the lowercase z's descender curl turns to mush. We swap to
+        uppercase italic Z at weight 600 — heavier strokes, cleaner read. Rounded square
+        instead of circle so browser chrome doesn't crop it to nothing.
+      </p>
+
+      <div class="plate">
+        <div class="fav-tab">
+          <img src="favicon.svg" alt="" />
+          <span>ZeroSpam — by invitation</span>
+          <span class="x" aria-hidden="true">×</span>
+        </div>
+        <span class="caption">browser tab · live favicon</span>
+      </div>
+
+      <div class="fav-ladder">
+        <div class="item">
+          <img src="favicon.svg" alt="favicon at 48px" width="48" height="48" />
+          <span class="label">48 px</span>
+        </div>
+        <div class="item">
+          <img src="favicon.svg" alt="favicon at 32px" width="32" height="32" />
+          <span class="label">32 px</span>
+        </div>
+        <div class="item">
+          <img src="favicon.svg" alt="favicon at 24px" width="24" height="24" />
+          <span class="label">24 px</span>
+        </div>
+        <div class="item">
+          <img src="favicon.svg" alt="favicon at 16px" width="16" height="16" />
+          <span class="label">16 px · min</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 05 LOCKUPS ──────────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>05 — Lockups</span>
+      <span class="meta">stacked · horizontal</span>
+    </div>
+
+    <section class="section">
+      <h2>Where the seal meets the wordmark.</h2>
+      <p class="lede">
+        For business cards, document covers, social-card corner anchors. Tagline mono
+        sits below a hairline rule — the rule does the divider work, the type does the
+        rest.
+      </p>
+
+      <div class="lockup-grid">
+        <!-- Stacked -->
+        <div class="lockup-card">
+          <span class="caption">stacked · vertical</span>
+          <div class="lockup-stacked">
+            <svg viewBox="0 0 400 400" width="120" height="120">
+              <defs>
+                <mask id="lockup-stack-mask">
+                  <rect width="400" height="400" fill="white"/>
+                  <text x="200" y="280" text-anchor="middle"
+                        style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                        fill="black">z</text>
+                </mask>
+              </defs>
+              <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#lockup-stack-mask)"/>
+              <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+            </svg>
+            <div class="wm" style="font-size:36px">Zero<span class="dot"></span>Spam</div>
+            <div class="rule"></div>
+            <div class="tagline">Whitelist-First Email</div>
+          </div>
+        </div>
+
+        <!-- Horizontal -->
+        <div class="lockup-card">
+          <span class="caption">horizontal · navigation</span>
+          <div class="lockup-horizontal">
+            <svg viewBox="0 0 400 400" width="84" height="84">
+              <defs>
+                <mask id="lockup-horiz-mask">
+                  <rect width="400" height="400" fill="white"/>
+                  <text x="200" y="280" text-anchor="middle"
+                        style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                        fill="black">z</text>
+                </mask>
+              </defs>
+              <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#lockup-horiz-mask)"/>
+              <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+            </svg>
+            <div class="text-block">
+              <div class="wm" style="font-size:32px">Zero<span class="dot"></span>Spam</div>
+              <div class="rule-h"></div>
+              <div class="tagline">Whitelist-First Email</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 06 SOCIAL CARD ──────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>06 — Social Card</span>
+      <span class="meta">1200 × 630 · open graph</span>
+    </div>
+
+    <section class="section">
+      <h2>One image, the whole pitch.</h2>
+      <p class="lede">
+        How the brand shows up in link previews and share cards. Italic headline carries
+        the yellow highlight; seal anchors the upper-right corner; mono colophon at the
+        baseline.
+      </p>
+
+      <div class="social-card">
+        <div class="social-card-top">
+          <div class="wm" style="font-size:30px">Zero<span class="dot"></span>Spam</div>
+          <svg viewBox="0 0 400 400" width="80" height="80">
+            <defs>
+              <mask id="social-mask">
+                <rect width="400" height="400" fill="white"/>
+                <text x="200" y="280" text-anchor="middle"
+                      style="font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-style:italic;font-size:280px;letter-spacing:-0.01em;"
+                      fill="black">z</text>
+              </mask>
+            </defs>
+            <circle cx="200" cy="200" r="180" fill="#0A0A0A" mask="url(#social-mask)"/>
+            <circle cx="298" cy="262" r="16" fill="#FFD52E"/>
+          </svg>
+        </div>
+        <h3 class="social-card-headline">
+          Your inbox is <span class="accent">by invitation</span>.<br/>
+          <em>Everything else expires.</em>
+        </h3>
+        <div class="social-card-foot">
+          <span class="url">zero-spam.email</span>
+          <span>by invitation only</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 07 DON'TS ──────────────────────────────────────────────── -->
+    <div class="section-rule" aria-hidden="true">
+      <span class="label"><span class="square"></span>07 — Don'ts</span>
+      <span class="meta">anti-patterns</span>
+    </div>
+
+    <section class="section">
+      <h2>Don't.</h2>
+      <p class="lede">
+        Each panel is exactly the wrong move. The brand reads correctly because of the
+        details below; ignore them and it doesn't.
+      </p>
+
+      <div class="donts">
+        <div class="dont">
+          <span class="x-mark" aria-label="don't">✕</span>
+          <div class="demo">
+            <span class="wm" style="font-size:36px;font-style:normal !important">Zero<span class="dot"></span>Spam</span>
+          </div>
+          <span class="desc">Don't set the wordmark in roman.</span>
+        </div>
+
+        <div class="dont">
+          <span class="x-mark" aria-label="don't">✕</span>
+          <div class="demo">
+            <span class="wm" style="font-size:36px">Zero<span class="dot" style="background:#B53C2F !important"></span>Spam</span>
+          </div>
+          <span class="desc">Don't recolor the dot.</span>
+        </div>
+
+        <div class="dont">
+          <span class="x-mark" aria-label="don't">✕</span>
+          <div class="demo">
+            <span class="wm" style="font-size:36px">Zero<span aria-hidden="true" style="display:inline-block;width:0.6em;text-align:center;color:var(--signal-deep)">♥</span>Spam</span>
+          </div>
+          <span class="desc">Don't replace the dot with a glyph.</span>
+        </div>
+
+        <div class="dont">
+          <span class="x-mark" aria-label="don't">✕</span>
+          <div class="demo">
+            <span class="wm" style="font-size:36px;letter-spacing:0.15em !important">Zero<span class="dot"></span>Spam</span>
+          </div>
+          <span class="desc">Don't loosen the letter-spacing.</span>
+        </div>
+
+        <div class="dont">
+          <span class="x-mark" aria-label="don't">✕</span>
+          <div class="demo">
+            <span class="wm" style="font-size:36px;font-family:'Times New Roman',Times,serif !important">Zero<span class="dot"></span>Spam</span>
+          </div>
+          <span class="desc">Don't substitute another serif family.</span>
+        </div>
+
+        <div class="dont">
+          <span class="x-mark" aria-label="don't">✕</span>
+          <div class="demo">
+            <span style="display:inline-block;border:2px solid var(--ink);padding:14px 22px;border-radius:24px"><span class="wm" style="font-size:24px">Zero<span class="dot"></span>Spam</span></span>
+          </div>
+          <span class="desc">Don't wrap the wordmark in a pill or box.</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="colophon-bottom">
+      <span>zero-spam.email · brand book · v1</span>
+      <span><a href="zerospam-vibe.md">vibe</a> &nbsp;·&nbsp; <a href="zerospam-logo.md">logo doc</a> &nbsp;·&nbsp; <a href="hero-mockup.html">hero</a></span>
+    </footer>
+
+  </div>
+</body>
+</html>

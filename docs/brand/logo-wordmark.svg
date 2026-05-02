@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZeroSpam — Wordmark
+  Source Serif 4 Italic 500. Yellow dot punctuation between "Zero" and "Spam".
+  This SVG depends on Source Serif 4 being loaded by the host page.
+  For production export, outline glyphs to paths first.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 800 200"
+     width="800" height="200"
+     role="img"
+     aria-label="ZeroSpam">
+  <title>ZeroSpam</title>
+  <defs>
+    <style>
+      .zs-word {
+        font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+        font-weight: 500;
+        font-style: italic;
+        font-size: 120px;
+        letter-spacing: -0.015em;
+        fill: #0A0A0A;
+      }
+    </style>
+  </defs>
+
+  <!-- "Zero" — anchored to right edge so it ends just before the dot -->
+  <text class="zs-word" x="388" y="135" text-anchor="end">Zero</text>
+
+  <!-- The Yellow Dot — the brand. Diameter ≈ 0.18em of cap height. -->
+  <circle cx="400" cy="100" r="11" fill="#FFD52E"/>
+
+  <!-- "Spam" — anchored to left edge starting just after the dot -->
+  <text class="zs-word" x="412" y="135" text-anchor="start">Spam</text>
+</svg>
