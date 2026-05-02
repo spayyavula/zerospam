@@ -138,4 +138,35 @@ describe('MailboxManager', () => {
     await user.click(screen.getByTitle('Close'));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('the chevron button toggles the DigestSettings panel', async () => {
+    const user = userEvent.setup();
+    render(<MailboxManager onClose={() => {}} onChanged={() => {}} />);
+    await screen.findByText('alice@example.com');
+    expect(screen.queryByText(/Email me a daily digest/)).not.toBeInTheDocument();
+    await user.click(screen.getByTitle('Digest settings'));
+    expect(screen.getByText(/Email me a daily digest/)).toBeInTheDocument();
+    await user.click(screen.getByTitle('Digest settings'));
+    expect(screen.queryByText(/Email me a daily digest/)).not.toBeInTheDocument();
+  });
+
+  it('saving DigestSettings PATCHes mailbox with the chosen fields', async () => {
+    const user = userEvent.setup();
+    render(<MailboxManager onClose={() => {}} onChanged={() => {}} />);
+    await screen.findByText('alice@example.com');
+    await user.click(screen.getByTitle('Digest settings'));
+
+    await user.click(screen.getByLabelText(/Email me a daily digest/));
+    await user.selectOptions(screen.getByLabelText(/Time of day:/), '14');
+    await user.click(screen.getByRole('button', { name: /Save digest settings/ }));
+
+    await waitFor(() =>
+      expect(api.patchMailbox).toHaveBeenCalledWith(1, {
+        digestEnabled: true,
+        digestHour: 14,
+        digestRecipientMode: 'external',
+        ownerEmail: null,
+      }),
+    );
+  });
 });

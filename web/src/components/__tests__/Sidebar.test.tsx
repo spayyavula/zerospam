@@ -88,4 +88,24 @@ describe('Sidebar', () => {
     expect(onDkim).toHaveBeenCalled();
     expect(onPurge).toHaveBeenCalled();
   });
+
+  it('marks the current folder as active and others as not', () => {
+    renderSidebar({ folder: 'inbox' });
+    expect(screen.getByRole('button', { name: /^Inbox\b/ })).toHaveClass('text-zsaccent');
+    expect(screen.getByRole('button', { name: /^Sent\b/ })).not.toHaveClass('text-zsaccent');
+  });
+
+  it('exposes data-tour anchors used by WelcomeTour', () => {
+    const { container } = renderSidebar();
+    expect(container.querySelector('[data-tour="sidebar-screener"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tour="sidebar-quarantine"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tour="tool-whitelist"]')).toBeInTheDocument();
+  });
+
+  it('renders folder list even when counts is null', () => {
+    renderSidebar({ counts: null });
+    for (const label of ['Screener', 'Inbox', 'Quarantine', 'Sent', 'Drafts', 'Trash']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeInTheDocument();
+    }
+  });
 });

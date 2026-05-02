@@ -24,4 +24,18 @@ describe('App (smoke)', () => {
     render(<App />);
     expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
+
+  it('renders the main app shell when authMe resolves (authenticated)', async () => {
+    vi.mocked(api.authMe).mockResolvedValue({
+      user: {
+        id: 1,
+        email: 'a@x.com',
+        totp_enabled: false,
+        tour_completed_at: 1700000000000,
+      },
+    });
+    render(<App />);
+    expect(await screen.findByText('ZeroSpam')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Compose/ })).toBeInTheDocument();
+  });
 });

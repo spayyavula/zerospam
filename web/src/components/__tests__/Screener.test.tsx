@@ -195,4 +195,26 @@ describe('Screener', () => {
     const article = senderButton.closest('article')!;
     expect(within(article).getByText('Older')).toBeInTheDocument();
   });
+
+  it('reloads the screener list when api.screenerAllow rejects', async () => {
+    vi.mocked(api.screenerList).mockResolvedValue([senderRow()]);
+    vi.mocked(api.screenerAllow).mockRejectedValue(new Error('boom'));
+    const user = userEvent.setup();
+    render(
+      <Screener
+        mailboxId={1}
+        onDoneForNow={() => {}}
+        onChanged={() => {}}
+        onSuggestDomainExpand={() => {}}
+      />,
+    );
+    await screen.findByText('Sarah Q');
+    expect(api.screenerList).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /Yes/ }));
+
+    await waitFor(() => expect(api.screenerAllow).toHaveBeenCalled());
+    await waitFor(() => expect(api.screenerList).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Sarah Q')).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,6 @@
 // web/src/components/__tests__/WelcomeTour.test.tsx
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WelcomeTour from '../WelcomeTour';
 
@@ -53,6 +53,21 @@ describe('WelcomeTour', () => {
     expect(screen.getByText(/Welcome tour 4\/4/)).toBeInTheDocument();
     const done = screen.getByRole('button', { name: /^Done$/ });
     await user.click(done);
+    await waitFor(() => expect(api.tourComplete).toHaveBeenCalled());
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('mousedown outside the card advances to the next step', () => {
+    render(<WelcomeTour onClose={() => {}} />);
+    expect(screen.getByText(/Welcome tour 1\/4/)).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.getByText(/Welcome tour 2\/4/)).toBeInTheDocument();
+  });
+
+  it('Escape calls api.tourComplete and onClose', async () => {
+    const onClose = vi.fn();
+    render(<WelcomeTour onClose={onClose} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(api.tourComplete).toHaveBeenCalled());
     expect(onClose).toHaveBeenCalled();
   });
