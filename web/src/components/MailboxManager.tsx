@@ -46,6 +46,12 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
     load();
   };
 
+  const updateScreenerSla = async (m: Mailbox, hours: number) => {
+    if (hours === m.screener_sla_hours) return;
+    await api.patchMailbox(m.id, { screenerSlaHours: hours });
+    load();
+  };
+
   const remove = async (m: Mailbox) => {
     if (!confirm(`Delete mailbox ${m.address} and ALL its mail?`)) return;
     await api.deleteMailbox(m.id);
@@ -91,7 +97,7 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
             Each mailbox accepts mail at its full address. Quarantine TTL controls when non-whitelisted mail expires.
           </div>
           <div className="flex-1" />
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-zsborder/40">
+          <button onClick={onClose} title="Close" className="p-1.5 rounded hover:bg-zsborder/40">
             <X className="w-4 h-4" />
           </button>
         </header>
@@ -112,6 +118,7 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
           <div className="col-span-3 flex items-center gap-2">
             <input
               type="number"
+              aria-label="New mailbox quarantine TTL in hours"
               min={1}
               max={8760}
               className="flex-1 bg-zsbg border border-zsborder rounded px-2 py-1.5 text-sm"
@@ -122,6 +129,7 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
           </div>
           <button
             onClick={create}
+            title="Create mailbox"
             className="col-span-1 bg-zsaccent text-zsbg rounded px-2 py-1.5 text-sm font-medium hover:opacity-90 inline-flex items-center justify-center"
           >
             <Plus className="w-4 h-4" />
@@ -154,6 +162,7 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
                     )}
                     <input
                       type="number"
+                      aria-label="Quarantine TTL hours"
                       defaultValue={m.quarantine_ttl_hours}
                       min={1}
                       max={8760}
@@ -161,6 +170,16 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
                       className="w-20 bg-zsbg border border-zsborder rounded px-2 py-1 text-sm text-right"
                     />
                     <span className="text-xs text-zsmuted">h</span>
+                    <input
+                      type="number"
+                      aria-label="Screener SLA hours"
+                      defaultValue={m.screener_sla_hours}
+                      min={1}
+                      max={720}
+                      onBlur={(e) => updateScreenerSla(m, Number(e.target.value) || m.screener_sla_hours)}
+                      className="w-20 bg-zsbg border border-zsborder rounded px-2 py-1 text-sm text-right"
+                    />
+                    <span className="text-xs text-zsmuted">h screen</span>
                   </div>
                   <button
                     onClick={() => remove(m)}

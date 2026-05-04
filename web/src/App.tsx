@@ -26,6 +26,10 @@ import LoginForm from './components/LoginForm';
 import Signup from './components/Signup';
 import TotpSetupModal from './components/TotpSetupModal';
 import ThemeToggle from './components/ThemeToggle';
+import Screener from './components/Screener';
+import DomainExpandToast from './components/DomainExpandToast';
+import WelcomeTour from './components/WelcomeTour';
+import Landing from './components/Landing';
 import { useShortcuts } from './hooks/useShortcuts';
 import { Shield, Settings, HelpCircle } from 'lucide-react';
 
@@ -41,7 +45,7 @@ function draftToSummary(d: Draft): MessageSummary {
   return {
     id: d.id,
     mailbox_id: d.mailbox_id,
-    folder: 'sent', // not really, but the type union doesn't have 'draft' — only used for display fallbacks
+    folder: 'sent', // not really, but the type union doesn't have 'draft' Ã¢â‚¬â€ only used for display fallbacks
     from_address: '(draft)',
     from_name: 'Draft',
     to_addresses: JSON.stringify(to),
@@ -85,12 +89,32 @@ export default function App() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null); // null = checking
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const [tourOpen, setTourOpen] = useState(false);
+  const [domainToast, setDomainToast] = useState<{ mailboxId: number; domain: string } | null>(null);
+  const [showLanding, setShowLanding] = useState(true);
 
-  // auth check — runs first so we know whether to show the login gate
+  const loadAuthState = useCallback(async () => {
+    const me = await api.authMe();
+    setAuthed(true);
+    setTourOpen(me.user.tour_completed_at == null);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try {
+      await api.authLogout();
+    } finally {
+      // Always clear local auth state, even if the network request fails.
+      setAuthed(false);
+      setAuthView('login');
+      setShowLanding(true);
+      setTourOpen(false);
+      setDomainToast(null);
+    }
+  }, []);
+
+  // auth check Ã¢â‚¬â€ runs first so we know whether to show the login gate
   useEffect(() => {
-    api.authMe()
-      .then(() => setAuthed(true))
-      .catch(() => setAuthed(false));
+    loadAuthState().catch(() => setAuthed(false));
   }, []);
 
   // initial mailbox load
@@ -112,6 +136,9 @@ export default function App() {
       const ds = await api.listDrafts(activeMailboxId);
       setDrafts(ds);
       setMessages(ds.map(draftToSummary));
+    } else if (folder === 'screener') {
+      setDrafts([]);
+      setMessages([]);
     } else {
       setMessages(await api.list(activeMailboxId, folder));
       setDrafts([]);
@@ -120,6 +147,11 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     if (activeMailboxId == null) return;
+    if (folder === 'screener') {
+      setSearchResults(null);
+      await refreshCounts();
+      return;
+    }
     if (searchQuery.trim()) {
       const r = await api.search(activeMailboxId, searchQuery.trim());
       setSearchResults(r);
@@ -128,7 +160,7 @@ export default function App() {
       setSearchResults(null);
       await Promise.all([refreshList(), refreshCounts()]);
     }
-  }, [activeMailboxId, searchQuery, refreshList, refreshCounts]);
+  }, [activeMailboxId, searchQuery, refreshList, refreshCounts, folder]);
 
   useEffect(() => {
     refresh();
@@ -137,6 +169,10 @@ export default function App() {
   // debounced search
   useEffect(() => {
     if (activeMailboxId == null) return;
+    if (folder === 'screener') {
+      setSearchResults(null);
+      return;
+    }
     const q = searchQuery.trim();
     if (!q) {
       setSearchResults(null);
@@ -146,7 +182,7 @@ export default function App() {
       api.search(activeMailboxId, q).then(setSearchResults).catch(() => setSearchResults([]));
     }, 200);
     return () => clearTimeout(t);
-  }, [searchQuery, activeMailboxId]);
+  }, [searchQuery, activeMailboxId, folder]);
 
   // SSE subscription
   useEffect(() => {
@@ -156,7 +192,8 @@ export default function App() {
         (e.type === 'message:new' ||
           e.type === 'message:updated' ||
           e.type === 'message:deleted' ||
-          e.type === 'whitelist:changed') &&
+          e.type === 'whitelist:changed' ||
+          e.type === 'screener:changed') &&
         e.mailboxId === activeMailboxId
       ) {
         refresh();
@@ -168,6 +205,7 @@ export default function App() {
   const visible = searchResults ?? messages;
   const visibleIds = useMemo(() => visible.map((m) => m.id), [visible]);
   const searchActive = searchResults !== null;
+  const listFolder: FolderName | 'drafts' = folder === 'screener' ? 'inbox' : folder;
   const activeMailbox = mailboxes.find((m) => m.id === activeMailboxId) ?? null;
   const selectedIndex = selectedId ? visibleIds.indexOf(selectedId) : -1;
   const selectedMsg = selectedId ? visible.find((m) => m.id === selectedId) ?? null : null;
@@ -314,8 +352,11 @@ export default function App() {
 
   if (authed === null) return null;
   if (!authed) {
+    if (showLanding) {
+      return <Landing onGetStarted={() => setShowLanding(false)} />;
+    }
     return authView === 'login' ? (
-      <LoginForm onSuccess={() => setAuthed(true)} onSwitchToSignup={() => setAuthView('signup')} />
+      <LoginForm onSuccess={() => loadAuthState()} onSwitchToSignup={() => setAuthView('signup')} />
     ) : (
       <Signup onSwitchToLogin={() => setAuthView('login')} />
     );
@@ -330,6 +371,7 @@ export default function App() {
         <div className="flex-1" />
         {activeMailbox && (
           <select
+            aria-label="Active mailbox"
             className="bg-zsbg border border-zsborder rounded px-2 py-1 text-sm"
             value={activeMailboxId ?? ''}
             onChange={(e) => setActiveMailboxId(Number(e.target.value))}
@@ -355,9 +397,17 @@ export default function App() {
         >
           2FA
         </button>
+        <button
+          onClick={() => void signOut()}
+          className="px-2.5 py-1.5 rounded border border-zsborder hover:bg-zsborder/40 text-xs"
+          title="Sign out"
+        >
+          Sign out
+        </button>
         <ThemeToggle />
         <button
           onClick={() => setShowHelp(true)}
+          data-tour="header-help"
           className="p-1.5 rounded hover:bg-zsborder/40 text-zsmuted"
           title="Keyboard shortcuts (?)"
         >
@@ -394,7 +444,14 @@ export default function App() {
           }}
         />
 
-        {folder === 'quarantine' && probationary && activeMailboxId != null ? (
+        {folder === 'screener' && activeMailboxId != null ? (
+          <Screener
+            mailboxId={activeMailboxId}
+            onDoneForNow={() => setFolder('inbox')}
+            onChanged={refresh}
+            onSuggestDomainExpand={(payload) => setDomainToast(payload)}
+          />
+        ) : folder === 'quarantine' && probationary && activeMailboxId != null ? (
           <ProbationaryWall
             messages={visible}
             mailboxId={activeMailboxId}
@@ -405,7 +462,7 @@ export default function App() {
           <>
             <MessageList
               messages={visible}
-              folder={folder}
+              folder={listFolder}
               selectedId={selectedId}
               searchQuery={searchQuery}
               searchActive={searchActive}
@@ -483,6 +540,16 @@ export default function App() {
       )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       {showSecurity && <TotpSetupModal onClose={() => setShowSecurity(false)} />}
+      {tourOpen && mailboxes.length > 0 && <WelcomeTour onClose={() => setTourOpen(false)} />}
+      {domainToast && (
+        <DomainExpandToast
+          mailboxId={domainToast.mailboxId}
+          domain={domainToast.domain}
+          onClose={() => setDomainToast(null)}
+          onChanged={refresh}
+        />
+      )}
     </div>
   );
 }
+

@@ -52,7 +52,22 @@ export function loadOrCreateSessionSecret(input: { value: string | undefined; is
 }
 
 export function parseAllowedOrigins(raw: string | undefined): string[] {
-  if (!raw) return ['http://localhost:5173'];
+  if (!raw) {
+    return [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:8081',
+      'http://localhost:8082',
+      'http://localhost:8083',
+      'http://localhost:8084',
+      'http://127.0.0.1:8081',
+      'http://127.0.0.1:8082',
+      'http://127.0.0.1:8083',
+      'http://127.0.0.1:8084',
+      'http://localhost:19006',
+      'http://127.0.0.1:19006',
+    ];
+  }
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
 

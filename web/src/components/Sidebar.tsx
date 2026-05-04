@@ -1,4 +1,5 @@
 import {
+  Eye,
   Inbox,
   ShieldAlert,
   Send,
@@ -14,6 +15,7 @@ import {
 import type { Counts, SidebarFolder } from '../types';
 
 const folders: { key: SidebarFolder; label: string; icon: any }[] = [
+  { key: 'screener', label: 'Screener', icon: Eye },
   { key: 'inbox', label: 'Inbox', icon: Inbox },
   { key: 'quarantine', label: 'Quarantine', icon: ShieldAlert },
   { key: 'sent', label: 'Sent', icon: Send },
@@ -66,6 +68,13 @@ export default function Sidebar({
             <button
               key={f.key}
               onClick={() => onFolder(f.key)}
+              data-tour={
+                f.key === 'screener'
+                  ? 'sidebar-screener'
+                  : f.key === 'quarantine'
+                    ? 'sidebar-quarantine'
+                    : undefined
+              }
               className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm
                 ${active ? 'bg-zsaccent/10 text-zsaccent' : 'hover:bg-zsborder/40 text-zstext'}`}
             >
@@ -86,7 +95,7 @@ export default function Sidebar({
 
       <div className="px-3 py-2 text-xs uppercase tracking-wider text-zsmuted">Tools</div>
       <div className="px-2 pb-3 space-y-0.5">
-        <SidebarBtn icon={ListChecks} label="Whitelist" onClick={onWhitelist} />
+        <SidebarBtn icon={ListChecks} label="Whitelist" onClick={onWhitelist} dataTour="tool-whitelist" />
         <SidebarBtn icon={Tag} label="Aliases" onClick={onAliases} />
         <SidebarBtn icon={Beaker} label="Test Injector" onClick={onInject} />
         <SidebarBtn icon={Key} label="DKIM / DNS" onClick={onDkim} />
@@ -101,15 +110,18 @@ function SidebarBtn({
   label,
   onClick,
   danger,
+  dataTour,
 }: {
   icon: any;
   label: string;
   onClick: () => void;
   danger?: boolean;
+  dataTour?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      data-tour={dataTour}
       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm ${
         danger ? 'text-zsdanger hover:bg-zsdanger/10' : 'hover:bg-zsborder/40'
       }`}

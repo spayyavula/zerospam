@@ -22,6 +22,7 @@ beforeEach(() => {
     DELETE FROM attachments;
     DELETE FROM contacts;
     DELETE FROM whitelist_rules;
+    DELETE FROM screener_mutes;
     DELETE FROM aliases;
     DELETE FROM drafts;
     DELETE FROM mailboxes;

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1777595460824,
+  "lastScanned": 1777869701556,
   "projectRoot": "c:\\Users\\sreek\\myprojects\\ZeroSpam Email",
   "techStack": {
     "languages": [
@@ -18,15 +18,20 @@
     "runtime": "Node.js 20"
   },
   "build": {
-    "buildCommand": "cd \"C:\\Users\\sreek\\myprojects\\ZeroSpam Email\" && npm run build --workspace=server 2>&1 | tail -5",
-    "testCommand": "cd \"c:/Users/sreek/myprojects/ZeroSpam Email\" && npm test --workspace=server 2>&1 | tail -25",
+    "buildCommand": "npm run build",
+    "testCommand": null,
     "lintCommand": null,
     "devCommand": "npm run dev",
     "scripts": {
-      "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+      "dev": "concurrently -n server,web,mobile -c blue,green,magenta \"npm:dev:server\" \"npm:dev:web\" \"npm:dev:mobile\"",
       "dev:server": "npm run dev --workspace=server",
       "dev:web": "npm run dev --workspace=web",
-      "build": "npm run build --workspace=web && npm run build --workspace=server",
+      "dev:mobile": "npm run start --workspace=@zerospam/mobile",
+      "build": "npm run build:shared-api && npm run build --workspace=web && npm run build --workspace=server",
+      "build:mobile": "npm run build --workspace=@zerospam/mobile",
+      "build:shared-api": "npm run build --workspace=@zerospam/shared-api",
+      "typecheck:mobile": "npm run typecheck --workspace=@zerospam/mobile",
+      "lint:mobile": "npm run lint --workspace=@zerospam/mobile",
       "start": "npm run start --workspace=server",
       "seed": "tsx server/src/seed.ts",
       "seed:owner": "tsx server/src/seed-owner.ts",
@@ -44,38 +49,81 @@
     "isMonorepo": true,
     "workspaces": [
       "server",
-      "web"
+      "web",
+      "apps/mobile",
+      "packages/shared-api"
     ],
     "mainDirectories": [
       "docs"
     ],
-    "gitBranches": null
+    "gitBranches": {
+      "defaultBranch": "feat/quarantine-digest",
+      "branchingStrategy": null
+    }
   },
   "customNotes": [],
   "directoryMap": {
+    "apps": {
+      "path": "apps",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1777869701522,
+      "keyFiles": []
+    },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1777869701523,
+      "keyFiles": [
+        "screener-smoke.md"
+      ]
+    },
+    "packages": {
+      "path": "packages",
+      "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777595460787,
+      "lastAccessed": 1777869701530,
       "keyFiles": []
     },
     "server": {
       "path": "server",
       "purpose": null,
       "fileCount": 4,
-      "lastAccessed": 1777595460787,
+      "lastAccessed": 1777869701530,
       "keyFiles": [
         "package.json",
         "tsconfig.json",
         "vitest.config.ts"
       ]
     },
+    "smoke-data": {
+      "path": "smoke-data",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1777869701531,
+      "keyFiles": [
+        "zerospam.sqlite",
+        "zerospam.sqlite-shm",
+        "zerospam.sqlite-wal"
+      ]
+    },
+    "ui-data": {
+      "path": "ui-data",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1777869701531,
+      "keyFiles": [
+        "zerospam.sqlite",
+        "zerospam.sqlite-shm",
+        "zerospam.sqlite-wal"
+      ]
+    },
     "web": {
       "path": "web",
       "purpose": null,
-      "fileCount": 6,
-      "lastAccessed": 1777595460798,
+      "fileCount": 8,
+      "lastAccessed": 1777869701532,
       "keyFiles": [
         "index.html",
         "package.json",
@@ -87,48 +135,59 @@
     "server\\data": {
       "path": "server\\data",
       "purpose": "Data files",
-      "fileCount": 3,
-      "lastAccessed": 1777595460799,
+      "fileCount": 5,
+      "lastAccessed": 1777869701533,
       "keyFiles": [
         "zerospam.sqlite",
         "zerospam.sqlite-shm",
         "zerospam.sqlite-wal"
       ]
     },
+    "server\\dist": {
+      "path": "server\\dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 66,
+      "lastAccessed": 1777869701533,
+      "keyFiles": [
+        "accounts.js",
+        "accounts.js.map",
+        "api.js"
+      ]
+    },
     "server\\node_modules": {
       "path": "server\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 0,
-      "lastAccessed": 1777595460799,
+      "lastAccessed": 1777869701534,
       "keyFiles": []
     },
     "server\\src": {
       "path": "server\\src",
       "purpose": "Source code",
-      "fileCount": 22,
-      "lastAccessed": 1777595460799,
+      "fileCount": 33,
+      "lastAccessed": 1777869701534,
       "keyFiles": [
+        "accounts.ts",
         "api.ts",
-        "audit.ts",
-        "config.ts"
+        "audit.ts"
       ]
     },
     "server\\test": {
       "path": "server\\test",
       "purpose": "Test files",
-      "fileCount": 19,
-      "lastAccessed": 1777595460800,
+      "fileCount": 42,
+      "lastAccessed": 1777869701535,
       "keyFiles": [
-        "audit.test.ts",
-        "auth-login.test.ts",
-        "auth-logout.test.ts"
+        "account-scoping.test.ts",
+        "accounts.test.ts",
+        "api-patch-mailbox.test.ts"
       ]
     },
     "web\\dist": {
       "path": "web\\dist",
       "purpose": "Distribution/build output",
       "fileCount": 1,
-      "lastAccessed": 1777595460800,
+      "lastAccessed": 1777869701536,
       "keyFiles": [
         "index.html"
       ]
@@ -137,14 +196,14 @@
       "path": "web\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 0,
-      "lastAccessed": 1777595460801,
+      "lastAccessed": 1777869701536,
       "keyFiles": []
     },
     "web\\src": {
       "path": "web\\src",
       "purpose": "Source code",
       "fileCount": 5,
-      "lastAccessed": 1777595460801,
+      "lastAccessed": 1777869701537,
       "keyFiles": [
         "api.ts",
         "App.tsx",
@@ -155,20 +214,20 @@
   "hotPaths": [
     {
       "path": "server\\src\\api.ts",
-      "accessCount": 109,
-      "lastAccessed": 1777624205216,
+      "accessCount": 114,
+      "lastAccessed": 1777692287659,
       "type": "file"
     },
     {
       "path": "server\\src\\db.ts",
-      "accessCount": 59,
-      "lastAccessed": 1777624118329,
+      "accessCount": 62,
+      "lastAccessed": 1777692287866,
       "type": "file"
     },
     {
       "path": "server\\src",
-      "accessCount": 31,
-      "lastAccessed": 1777624180886,
+      "accessCount": 35,
+      "lastAccessed": 1777692309988,
       "type": "directory"
     },
     {
@@ -185,8 +244,14 @@
     },
     {
       "path": "server\\test\\helpers.ts",
-      "accessCount": 17,
-      "lastAccessed": 1777623354519,
+      "accessCount": 18,
+      "lastAccessed": 1777655666593,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\api.ts",
+      "accessCount": 13,
+      "lastAccessed": 1777682909810,
       "type": "file"
     },
     {
@@ -208,9 +273,21 @@
       "type": "file"
     },
     {
+      "path": "web\\package.json",
+      "accessCount": 11,
+      "lastAccessed": 1777687321181,
+      "type": "file"
+    },
+    {
       "path": "server\\src\\sender.ts",
       "accessCount": 10,
       "lastAccessed": 1777623316079,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1777685967095,
       "type": "file"
     },
     {
@@ -233,8 +310,8 @@
     },
     {
       "path": "server\\package.json",
-      "accessCount": 6,
-      "lastAccessed": 1777443097839,
+      "accessCount": 7,
+      "lastAccessed": 1777681516309,
       "type": "file"
     },
     {
@@ -244,15 +321,21 @@
       "type": "file"
     },
     {
-      "path": "web\\src\\App.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1777619768976,
+      "path": "web\\src\\types.ts",
+      "accessCount": 6,
+      "lastAccessed": 1777686358340,
       "type": "file"
     },
     {
-      "path": "web\\src\\api.ts",
+      "path": "package.json",
       "accessCount": 5,
-      "lastAccessed": 1777620041413,
+      "lastAccessed": 1777683663784,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\components\\MailboxManager.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1777685121487,
       "type": "file"
     },
     {
@@ -262,9 +345,9 @@
       "type": "file"
     },
     {
-      "path": "package.json",
+      "path": "server\\src\\events.ts",
       "accessCount": 3,
-      "lastAccessed": 1777453244854,
+      "lastAccessed": 1777692293186,
       "type": "file"
     },
     {
@@ -283,12 +366,6 @@
       "path": "server\\src\\smtp.ts",
       "accessCount": 2,
       "lastAccessed": 1777438800904,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\components\\MailboxManager.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1777441373951,
       "type": "file"
     },
     {
@@ -328,9 +405,15 @@
       "type": "file"
     },
     {
-      "path": "web\\src\\types.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777431838570,
+      "path": "web\\src\\components\\MessageList.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777654216903,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\whitelist.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777692318510,
       "type": "file"
     },
     {
@@ -346,12 +429,6 @@
       "type": "file"
     },
     {
-      "path": "web\\src\\components\\MessageList.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777431923646,
-      "type": "file"
-    },
-    {
       "path": "web\\src\\components\\ReadingPane.tsx",
       "accessCount": 1,
       "lastAccessed": 1777431972809,
@@ -364,27 +441,9 @@
       "type": "file"
     },
     {
-      "path": "server\\src\\whitelist.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777438799436,
-      "type": "file"
-    },
-    {
       "path": "server\\src\\auth.ts",
       "accessCount": 1,
       "lastAccessed": 1777438801799,
-      "type": "file"
-    },
-    {
-      "path": "server\\src\\events.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777441375091,
-      "type": "file"
-    },
-    {
-      "path": "web\\package.json",
-      "accessCount": 1,
-      "lastAccessed": 1777453245259,
       "type": "file"
     },
     {

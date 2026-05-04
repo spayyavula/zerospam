@@ -24,7 +24,9 @@ describe('GET /api/auth/me', () => {
       method: 'GET', url: '/api/auth/me', headers: { cookie: makeSessionCookie(userId) },
     });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toEqual({ user: { id: userId, email, totp_enabled: false } });
+    expect(r.json()).toEqual({
+      user: { id: userId, email, totp_enabled: false, tour_completed_at: null },
+    });
   });
 
   it('returns 401 without a session', async () => {

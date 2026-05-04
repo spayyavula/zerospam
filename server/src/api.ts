@@ -14,7 +14,9 @@ import { ingest } from './ingest.js';
 import { sendMessage } from './sender.js';
 import { ensureDkim, dnsRecord } from './dkim.js';
 import { authRoutes } from './routes/auth.js';
+import { screenerRoutes } from './routes/screener.js';
 import { requireAuth } from './requireAuth.js';
+import { getScreenerCounts } from './screener.js';
 
 export async function startApi(opts: { inject?: boolean } = {}) {
   const app = Fastify({ logger: { level: config.logLevel } });
@@ -60,6 +62,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   });
 
   await app.register(authRoutes);
+  await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
@@ -159,6 +162,8 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   const patchMailboxSchema = z.object({
     displayName: z.string().nullable().optional(),
     quarantineTtlHours: z.coerce.number().int().min(1).max(8760).optional(),
+    screenerSlaHours: z.coerce.number().int().min(1).max(720).optional(),
+    screener_sla_hours: z.coerce.number().int().min(1).max(720).optional(),
     digestEnabled: z.boolean().optional(),
     digestHour: z.coerce.number().int().min(0).max(23).optional(),
     digestRecipientMode: z.enum(['external', 'loopback']).optional(),
@@ -172,7 +177,12 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     if (!ownsMailbox(accountId, id)) {
       return reply.code(404).send({ error: 'mailbox not found' });
     }
-    const body = patchMailboxSchema.parse(req.body);
+    const parsed = patchMailboxSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(422).send({ error: 'invalid-body' });
+    }
+    const body = parsed.data;
+    const screenerSlaHours = body.screenerSlaHours ?? body.screener_sla_hours;
 
     // Validate cross-field constraints based on the post-merge state.
     const current = db
@@ -199,6 +209,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     if (body.quarantineTtlHours !== undefined) {
       fields.push('quarantine_ttl_hours = ?');
       values.push(body.quarantineTtlHours);
+    }
+    if (screenerSlaHours !== undefined) {
+      fields.push('screener_sla_hours = ?');
+      values.push(screenerSlaHours);
     }
     if (body.digestEnabled !== undefined) {
       fields.push('digest_enabled = ?');
@@ -262,6 +276,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       .all(Number(id)) as { folder: string; total: number; unread: number }[];
     const out: Record<string, { total: number; unread: number }> = {
       inbox: { total: 0, unread: 0 },
+      screener: { total: 0, unread: 0 },
       quarantine: { total: 0, unread: 0 },
       sent: { total: 0, unread: 0 },
       trash: { total: 0, unread: 0 },
@@ -272,6 +287,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       .prepare('SELECT COUNT(*) AS c FROM drafts WHERE mailbox_id = ?')
       .get(Number(id)) as { c: number }).c;
     out.drafts = { total: draftsCount, unread: 0 };
+    out.screener = getScreenerCounts(Number(id));
     return out;
   });
 

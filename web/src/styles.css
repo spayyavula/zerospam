@@ -66,3 +66,72 @@ input, button, textarea, select { font: inherit; letter-spacing: inherit; }
 
 .fade-in { animation: fadeIn 160ms ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+.tour-spotlight {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+
+.tour-card {
+  --tour-arrow-x: 24px;
+}
+
+.tour-card-arrow {
+  position: absolute;
+  left: calc(var(--tour-arrow-x) - 6px);
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  background: rgb(var(--zspanel));
+  border-left: 1px solid rgb(var(--zsborder));
+  border-top: 1px solid rgb(var(--zsborder));
+}
+
+.tour-card[data-arrow='top'] .tour-card-arrow {
+  top: -7px;
+}
+
+.tour-card[data-arrow='bottom'] .tour-card-arrow {
+  bottom: -7px;
+  transform: rotate(225deg);
+}
+
+.tour-card[data-arrow='none'] .tour-card-arrow {
+  display: none;
+}
+
+.screener-row {
+  animation: screenerRise 180ms ease-out;
+}
+
+.screener-expand {
+  animation: screenerExpand 180ms ease-out;
+}
+
+@keyframes screenerRise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes screenerExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screener-row,
+  .screener-expand {
+    animation: none;
+  }
+}

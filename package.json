@@ -5,13 +5,20 @@
   "description": "Whitelist-first SMTP server + webmail. Default-deny inbox; everything else expires from quarantine.",
   "workspaces": [
     "server",
-    "web"
+    "web",
+    "apps/mobile",
+    "packages/shared-api"
   ],
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "dev": "concurrently -n server,web,mobile -c blue,green,magenta \"npm:dev:server\" \"npm:dev:web\" \"npm:dev:mobile\"",
     "dev:server": "npm run dev --workspace=server",
     "dev:web": "npm run dev --workspace=web",
-    "build": "npm run build --workspace=web && npm run build --workspace=server",
+    "dev:mobile": "npm run start --workspace=@zerospam/mobile",
+    "build": "npm run build:shared-api && npm run build --workspace=web && npm run build --workspace=server",
+    "build:mobile": "npm run build --workspace=@zerospam/mobile",
+    "build:shared-api": "npm run build --workspace=@zerospam/shared-api",
+    "typecheck:mobile": "npm run typecheck --workspace=@zerospam/mobile",
+    "lint:mobile": "npm run lint --workspace=@zerospam/mobile",
     "start": "npm run start --workspace=server",
     "seed": "tsx server/src/seed.ts",
     "seed:owner": "tsx server/src/seed-owner.ts",

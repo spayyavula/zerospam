@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import crypto from 'node:crypto';
 import { z } from 'zod';
 import { getOwnerByEmail, getOwnerById, verifyPassword, updateOwnerPassword, setTotpSecret } from '../users.js';
 import { verifyTotp, generateTotpSecret, provisioningUri } from '../totp.js';
@@ -10,6 +11,7 @@ import { signVerifyToken } from '../verify-token.js';
 import { getOrCreateSystemMailboxId } from '../system-mailbox.js';
 import { renderVerifyEmailHtml, renderVerifyEmailText } from '../verify-email-template.js';
 import { sendMessage } from '../sender.js';
+import { requireAuth } from '../requireAuth.js';
 
 async function dispatchVerificationEmail(app: FastifyInstance, userId: number, recipientEmail: string): Promise<void> {
   const mailboxId = getOrCreateSystemMailboxId();
@@ -126,7 +128,27 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!userId) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const u = getOwnerById(userId);
     if (!u) { reply.code(401).send({ error: 'unauthorized' }); return; }
-    return { user: { id: u.id, email: u.email, totp_enabled: !!u.totp_enabled_at } };
+    return {
+      user: {
+        id: u.id,
+        email: u.email,
+        totp_enabled: !!u.totp_enabled_at,
+        tour_completed_at: u.tour_completed_at ?? null,
+      },
+    };
+  });
+
+  app.post('/api/users/me/tour-complete', async (req, reply) => {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      reply.code(401).send({ error: 'unauthorized' });
+      return;
+    }
+    db.prepare('UPDATE users SET tour_completed_at = COALESCE(tour_completed_at, ?) WHERE id = ?').run(
+      Date.now(),
+      userId,
+    );
+    return { ok: true };
   });
 
   app.post('/api/auth/password', {
@@ -193,6 +215,44 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     setTotpSecret(userId, null);
     recordAudit({ event: 'totp.disabled', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+    return { ok: true };
+  });
+
+  // ── Device / bearer token management ───────────────────────────────────────
+  // Mobile apps exchange a short-lived cookie session (established by /login)
+  // for a long-lived per-device bearer token stored in SecureStore.
+
+  const deviceRegisterSchema = z.object({
+    name: z.string().min(1).max(120),
+    platform: z.enum(['ios', 'android', 'web']).optional(),
+    appVersion: z.string().max(40).optional(),
+  });
+
+  app.post('/api/auth/devices', { preHandler: requireAuth }, async (req, reply) => {
+    const userId = req.user!.id;
+    const parsed = deviceRegisterSchema.safeParse(req.body);
+    if (!parsed.success) {
+      reply.code(422).send({ error: 'invalid-body' });
+      return;
+    }
+    const { name, platform, appVersion } = parsed.data;
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO devices (user_id, name, token_hash, platform, app_version, created_at, last_seen_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(userId, name, tokenHash, platform ?? null, appVersion ?? null, now, now);
+    recordAudit({ event: 'device.register', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+    return { token: rawToken };
+  });
+
+  app.delete('/api/auth/devices/me', { preHandler: requireAuth }, async (req) => {
+    const deviceId = req.device?.id;
+    if (deviceId != null) {
+      db.prepare('UPDATE devices SET revoked_at = ? WHERE id = ?').run(Date.now(), deviceId);
+      recordAudit({ event: 'device.revoke', userId: req.user!.id, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
+    }
     return { ok: true };
   });
 }

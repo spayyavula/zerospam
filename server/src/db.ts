@@ -52,6 +52,17 @@ CREATE TABLE IF NOT EXISTS whitelist_rules (
 );
 CREATE INDEX IF NOT EXISTS idx_wl_mailbox ON whitelist_rules(mailbox_id);
 
+CREATE TABLE IF NOT EXISTS screener_mutes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mailbox_id INTEGER NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
+  sender_addr TEXT NOT NULL,
+  muted_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  UNIQUE(mailbox_id, sender_addr)
+);
+CREATE INDEX IF NOT EXISTS idx_screener_mutes_lookup
+  ON screener_mutes(mailbox_id, sender_addr, expires_at);
+
 CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
   mailbox_id INTEGER NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
@@ -248,6 +259,9 @@ if (!mailboxCols.has('digest_consecutive_failures')) {
     'ALTER TABLE mailboxes ADD COLUMN digest_consecutive_failures INTEGER NOT NULL DEFAULT 0',
   );
 }
+if (!mailboxCols.has('screener_sla_hours')) {
+  db.exec('ALTER TABLE mailboxes ADD COLUMN screener_sla_hours INTEGER NOT NULL DEFAULT 48');
+}
 
 const messageCols = colsOf('messages');
 if (!messageCols.has('attachment_count')) {
@@ -308,6 +322,9 @@ if (!userCols.has('account_id')) {
 }
 if (!userCols.has('email_verified_at')) {
   db.exec('ALTER TABLE users ADD COLUMN email_verified_at INTEGER');
+}
+if (!userCols.has('tour_completed_at')) {
+  db.exec('ALTER TABLE users ADD COLUMN tour_completed_at INTEGER');
 }
 const mailboxCols2 = colsOf('mailboxes');
 if (!mailboxCols2.has('account_id')) {
@@ -418,6 +435,7 @@ export type Mailbox = {
   last_digest_sent_at: number | null;
   digest_last_error: string | null;
   digest_consecutive_failures: number;
+  screener_sla_hours: number;
   account_id: number;
   provider: 'gmail' | 'outlook' | null;
 };
@@ -507,6 +525,7 @@ export type User = {
   totp_enabled_at: number | null;
   account_id: number;
   email_verified_at: number | null;
+  tour_completed_at: number | null;
   created_at: number;
 };
 

@@ -9,7 +9,9 @@ describe('config parsers', () => {
     expect(parseAllowedOrigins('a, b ,c')).toEqual(['a', 'b', 'c']);
   });
   it('parseAllowedOrigins falls back when empty', () => {
-    expect(parseAllowedOrigins(undefined)).toEqual(['http://localhost:5173']);
+    const defaults = parseAllowedOrigins(undefined);
+    expect(defaults).toContain('http://localhost:5173');
+    expect(defaults.length).toBeGreaterThan(1);
   });
 });
 

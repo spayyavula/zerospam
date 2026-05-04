@@ -1,7 +1,7 @@
 {
-  "tool_name": "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics",
-  "tool_input_preview": "{\"file\":\"C:\\\\Users\\\\sreek\\\\myprojects\\\\ZeroSpam Email\\\\server\\\\test\\\\config.test.ts\"}",
-  "error": "Language server 'typescript-language-server' not found.\nInstall with: npm install -g typescript-language-server typescript",
-  "timestamp": "2026-05-01T08:24:02.881Z",
-  "retry_count": 4
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"c:/Users/sreek/myprojects/ZeroSpam Email\\\" && python -c \\\"\\nfrom html.parser import HTMLParser\\nclass Check(HTMLParser):\\n    def __init__(self):\\n        super().__init__()\\n        ...",
+  "error": "Exit code 1\nTraceback (most recent call last):\r\n  File \"<string>\", line 30, in <module>\r\n    print(f, '\\u2192', 'OK' if not p.errors else p.errors)\r\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\\Lib\\encodings\\cp1252.py\", line 19, in encode\r\n    return codecs.charmap_encode(input,self.errors,encoding_table)[0]\r\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\nUnicod...",
+  "timestamp": "2026-05-02T03:49:55.038Z",
+  "retry_count": 1
 }
