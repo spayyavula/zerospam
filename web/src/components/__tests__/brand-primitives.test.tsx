@@ -50,3 +50,17 @@ describe('Hairline', () => {
     expect(el.className).toContain('border-rule');
   });
 });
+
+import { HardRule } from '../brand/HardRule';
+
+describe('HardRule', () => {
+  it('renders a 1px ink line with mono drop-label punching through', () => {
+    render(<HardRule label="THE MANUAL" />);
+    expect(screen.getByText('THE MANUAL').className).toContain('font-mono');
+    expect(screen.getByText('THE MANUAL').className).toContain('bg-paper');
+  });
+  it('renders a plain rule when no label', () => {
+    const { container } = render(<HardRule />);
+    expect(container.querySelector('[data-rule]')).not.toBeNull();
+  });
+});
