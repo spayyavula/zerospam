@@ -80,3 +80,20 @@ describe('EditorialButton', () => {
     expect(screen.getByRole('button')).toBeDisabled();
   });
 });
+
+import { EditorialInput } from '../brand/EditorialInput';
+
+describe('EditorialInput', () => {
+  it('renders a label and input bound by id', () => {
+    render(<EditorialInput label="EMAIL" />);
+    const input = screen.getByLabelText('EMAIL') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.tagName).toBe('INPUT');
+  });
+  it('passes through type and value', () => {
+    render(<EditorialInput label="EMAIL" type="email" value="a@b" onChange={() => {}} />);
+    const input = screen.getByLabelText('EMAIL') as HTMLInputElement;
+    expect(input.type).toBe('email');
+    expect(input.value).toBe('a@b');
+  });
+});
