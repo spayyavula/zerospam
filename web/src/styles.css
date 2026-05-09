@@ -18,6 +18,21 @@
   --zsdanger: 255 107 129;   /* #ff6b81 */
   --zsok: 127 224 161;       /* #7fe0a1 */
   color-scheme: dark;
+
+  /* Reading Room v2 — see docs/brand/zerospam-vibe.md */
+  --paper: #FBF8F1;
+  --paper-deep: #F5EFE3;
+  --ink: #0A0A0A;
+  --ink-soft: #2A2A2A;
+  --quiet: #6B6863;
+  --rule: #E8E1D2;
+  --rule-strong: #1F1F1F;
+  --signal: #FFD52E;
+  --signal-ink: #7A5C00;
+  --danger: #B53C2F;
+  --font-display: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Geist', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 :root[data-theme='light'] {
