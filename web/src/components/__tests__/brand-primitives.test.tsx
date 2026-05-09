@@ -97,3 +97,34 @@ describe('EditorialInput', () => {
     expect(input.value).toBe('a@b');
   });
 });
+
+import { OtpGrid } from '../brand/OtpGrid';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
+
+describe('OtpGrid', () => {
+  it('renders 6 single-digit boxes', () => {
+    render(<OtpGrid value="" onChange={() => {}} />);
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs).toHaveLength(6);
+    inputs.forEach((i) => expect(i.getAttribute('maxlength')).toBe('1'));
+  });
+  it('auto-advances on type', async () => {
+    const onChange = vi.fn();
+    render(<OtpGrid value="" onChange={onChange} />);
+    const user = userEvent.setup();
+    const inputs = screen.getAllByRole('textbox');
+    inputs[0].focus();
+    await user.keyboard('1');
+    expect(onChange).toHaveBeenCalledWith('1');
+  });
+  it('paste fills all 6 boxes', async () => {
+    const onChange = vi.fn();
+    render(<OtpGrid value="" onChange={onChange} />);
+    const user = userEvent.setup();
+    const inputs = screen.getAllByRole('textbox');
+    inputs[0].focus();
+    await user.paste('123456');
+    expect(onChange).toHaveBeenCalledWith('123456');
+  });
+});
