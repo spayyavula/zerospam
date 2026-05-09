@@ -64,3 +64,19 @@ describe('HardRule', () => {
     expect(container.querySelector('[data-rule]')).not.toBeNull();
   });
 });
+
+import { EditorialButton } from '../brand/EditorialButton';
+
+describe('EditorialButton', () => {
+  it('renders mono uppercase label and primary border', () => {
+    render(<EditorialButton>[ SIGN IN ↗ ]</EditorialButton>);
+    const btn = screen.getByRole('button', { name: /SIGN IN/ });
+    expect(btn.className).toContain('font-mono');
+    expect(btn.className).toContain('uppercase');
+    expect(btn.className).toContain('border-ink');
+  });
+  it('disables and dims when disabled', () => {
+    render(<EditorialButton disabled>X</EditorialButton>);
+    expect(screen.getByRole('button')).toBeDisabled();
+  });
+});
