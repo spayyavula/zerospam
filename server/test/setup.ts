@@ -34,6 +34,7 @@ beforeEach(() => {
     DELETE FROM users;
     DELETE FROM accounts WHERE id NOT IN (${DEFAULT_ACCOUNT_ID}, ${SYSTEM_ACCOUNT_ID});
     DELETE FROM digest_tokens_used;
+    DELETE FROM otp_codes;
   `);
 });
 

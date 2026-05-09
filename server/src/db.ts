@@ -224,6 +224,19 @@ CREATE TABLE IF NOT EXISTS digest_tokens_used (
   token_hash  TEXT PRIMARY KEY,
   used_at     INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  email          TEXT NOT NULL,
+  code_hash      TEXT NOT NULL,
+  purpose        TEXT NOT NULL CHECK (purpose IN ('login','signup','password_set','sensitive_op')),
+  created_at     INTEGER NOT NULL,
+  expires_at     INTEGER NOT NULL,
+  consumed_at    INTEGER,
+  attempt_count  INTEGER NOT NULL DEFAULT 0,
+  signup_payload TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_otp_email_active ON otp_codes(email, consumed_at);
 `;
 
 db.exec(SCHEMA);
