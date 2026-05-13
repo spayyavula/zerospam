@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, subscribeEvents } from './api';
 import type {
   BulkAction,
@@ -17,7 +17,7 @@ import ReadingPane from './components/ReadingPane';
 import WhitelistPanel from './components/WhitelistPanel';
 import InjectorPanel from './components/InjectorPanel';
 import MailboxManager from './components/MailboxManager';
-import ComposePanel from './components/ComposePanel';
+const ComposePanel = lazy(() => import('./components/ComposePanel'));
 import DkimPanel from './components/DkimPanel';
 import HelpModal from './components/HelpModal';
 import AliasManager from './components/AliasManager';
@@ -463,15 +463,17 @@ export default function App() {
         />
       )}
       {compose.open && activeMailboxId != null && (
-        <ComposePanel
-          mailboxes={mailboxes}
-          defaultMailboxId={activeMailboxId}
-          initial={compose.initial}
-          draftId={compose.draftId}
-          onClose={() => setCompose({ open: false })}
-          onSent={refresh}
-          onDraftSaved={refresh}
-        />
+        <Suspense fallback={null}>
+          <ComposePanel
+            mailboxes={mailboxes}
+            defaultMailboxId={activeMailboxId}
+            initial={compose.initial}
+            draftId={compose.draftId}
+            onClose={() => setCompose({ open: false })}
+            onSent={refresh}
+            onDraftSaved={refresh}
+          />
+        </Suspense>
       )}
       {showDkim && <DkimPanel onClose={() => setShowDkim(false)} />}
       {showAliases && activeMailboxId != null && (
