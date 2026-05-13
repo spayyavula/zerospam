@@ -60,4 +60,16 @@ describe('requireAuth', () => {
     });
     expect(r.statusCode).toBe(401);
   });
+
+  it('returns 401 for a lowercase-scheme bearer token (RFC-7235 case-insensitive)', async () => {
+    // RFC 7235 §2.1: auth-scheme is case-insensitive. "bearer" must reach the
+    // token-lookup branch; Phase A has no device rows so it still 401s.
+    const app = await buildApp();
+    const r = await app.inject({
+      method: 'GET',
+      url: '/secret',
+      headers: { authorization: 'bearer aabbccdd' },
+    });
+    expect(r.statusCode).toBe(401);
+  });
 });

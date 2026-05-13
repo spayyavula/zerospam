@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, subscribeEvents } from './api';
 import type {
   BulkAction,
@@ -17,7 +17,7 @@ import ReadingPane from './components/ReadingPane';
 import WhitelistPanel from './components/WhitelistPanel';
 import InjectorPanel from './components/InjectorPanel';
 import MailboxManager from './components/MailboxManager';
-import ComposePanel from './components/ComposePanel';
+const ComposePanel = lazy(() => import('./components/ComposePanel'));
 import DkimPanel from './components/DkimPanel';
 import HelpModal from './components/HelpModal';
 import AliasManager from './components/AliasManager';
@@ -91,6 +91,23 @@ export default function App() {
     api.authMe()
       .then(() => setAuthed(true))
       .catch(() => setAuthed(false));
+  }, []);
+
+  // Global mid-session 401 handler: if any API call rejects with {status:401}
+  // after we're already authed, send the user back to the login form.
+  // The initial authMe 401 is handled above; we gate on authed===true to avoid
+  // double-triggering during the startup check.
+  useEffect(() => {
+    const handler = (ev: PromiseRejectionEvent) => {
+      if ((ev.reason as any)?.status === 401) {
+        setAuthed((current) => {
+          if (current === true) return false;
+          return current;
+        });
+      }
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
   }, []);
 
   // initial mailbox load
@@ -463,15 +480,17 @@ export default function App() {
         />
       )}
       {compose.open && activeMailboxId != null && (
-        <ComposePanel
-          mailboxes={mailboxes}
-          defaultMailboxId={activeMailboxId}
-          initial={compose.initial}
-          draftId={compose.draftId}
-          onClose={() => setCompose({ open: false })}
-          onSent={refresh}
-          onDraftSaved={refresh}
-        />
+        <Suspense fallback={null}>
+          <ComposePanel
+            mailboxes={mailboxes}
+            defaultMailboxId={activeMailboxId}
+            initial={compose.initial}
+            draftId={compose.draftId}
+            onClose={() => setCompose({ open: false })}
+            onSent={refresh}
+            onDraftSaved={refresh}
+          />
+        </Suspense>
       )}
       {showDkim && <DkimPanel onClose={() => setShowDkim(false)} />}
       {showAliases && activeMailboxId != null && (

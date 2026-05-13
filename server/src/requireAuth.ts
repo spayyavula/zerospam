@@ -35,8 +35,8 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
   // 2. Bearer token (Phase B+ uses devices; Phase A still validates the table for forward compat)
   if (!req.account) {
     const auth = req.headers.authorization;
-    if (auth && auth.startsWith('Bearer ')) {
-      const token = auth.slice('Bearer '.length).trim();
+    if (auth && auth.toLowerCase().startsWith('bearer ')) {
+      const token = auth.slice('bearer '.length).trim();
       if (token) {
         const row = db
           .prepare(
