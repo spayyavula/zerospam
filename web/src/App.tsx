@@ -93,6 +93,23 @@ export default function App() {
       .catch(() => setAuthed(false));
   }, []);
 
+  // Global mid-session 401 handler: if any API call rejects with {status:401}
+  // after we're already authed, send the user back to the login form.
+  // The initial authMe 401 is handled above; we gate on authed===true to avoid
+  // double-triggering during the startup check.
+  useEffect(() => {
+    const handler = (ev: PromiseRejectionEvent) => {
+      if ((ev.reason as any)?.status === 401) {
+        setAuthed((current) => {
+          if (current === true) return false;
+          return current;
+        });
+      }
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
   // initial mailbox load
   useEffect(() => {
     api.mailboxes().then((m) => {
