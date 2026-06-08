@@ -48,6 +48,39 @@ export function seedMailbox(address: string, opts: SeedMailboxOpts = {}): number
   return r.id;
 }
 
+export type SeedConnectionOpts = {
+  cursor?: string | null;
+  status?: 'active' | 'needs_reconnect' | 'paused';
+  expiresAt?: number;
+  lastPolledAt?: number | null;
+  consecutiveFailures?: number;
+};
+
+export function seedConnection(
+  accountId: number,
+  mailboxId: number,
+  opts: SeedConnectionOpts = {},
+): number {
+  const r = db
+    .prepare(
+      `INSERT INTO connections
+         (account_id, mailbox_id, provider, access_enc, refresh_enc, expires_at,
+          cursor, status, last_polled_at, last_error, consecutive_failures, created_at)
+       VALUES (?, ?, 'gmail', 'enc', 'enc', ?, ?, ?, ?, NULL, ?, ?) RETURNING id`,
+    )
+    .get(
+      accountId,
+      mailboxId,
+      opts.expiresAt ?? Date.now() + 3600_000,
+      opts.cursor ?? '1',
+      opts.status ?? 'active',
+      opts.lastPolledAt ?? null,
+      opts.consecutiveFailures ?? 0,
+      Date.now(),
+    ) as { id: number };
+  return r.id;
+}
+
 export async function injectQuarantined(opts: {
   to: string;
   from: string;

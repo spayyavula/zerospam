@@ -17,6 +17,7 @@ vi.mock('nodemailer', () => ({
 // Keep this list in sync with the CREATE TABLE statements in db.ts.
 beforeEach(() => {
   db.exec(`
+    DELETE FROM connections;
     DELETE FROM messages_fts;
     DELETE FROM messages;
     DELETE FROM attachments;
