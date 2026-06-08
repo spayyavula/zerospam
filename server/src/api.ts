@@ -16,6 +16,7 @@ import { ensureDkim, dnsRecord } from './dkim.js';
 import { authRoutes } from './routes/auth.js';
 import { screenerRoutes } from './routes/screener.js';
 import { gmailOAuthRoutes } from './routes/oauth-gmail.js';
+import { connectionsRoutes } from './routes/connections.js';
 import { requireAuth } from './requireAuth.js';
 import { getScreenerCounts } from './screener.js';
 
@@ -60,6 +61,15 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
+    if (opts.inject) {
+      const a = req.headers['x-test-account'];
+      const u = req.headers['x-test-user'];
+      if (a) {
+        (req as any).account = { id: Number(a) };
+        (req as any).user = { id: Number(u ?? a) };
+        return;
+      }
+    }
     await requireAuth(req as any, reply as any);
   });
 
@@ -67,6 +77,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
   await app.register(gmailOAuthRoutes);
+  await app.register(connectionsRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
 
