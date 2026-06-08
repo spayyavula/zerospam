@@ -1,6 +1,6 @@
 // web/src/__tests__/App.test.tsx
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import App from '../App';
 
 vi.mock('../api', () => ({
@@ -19,9 +19,21 @@ describe('App (smoke)', () => {
     vi.mocked(api.mailboxes).mockResolvedValue([]);
   });
 
-  it('renders the LoginForm when authMe rejects (unauthenticated)', async () => {
+  it('shows the landing page when authMe rejects (unauthenticated)', async () => {
     vi.mocked(api.authMe).mockRejectedValue(new Error('unauthorized'));
     render(<App />);
+    expect(
+      (await screen.findAllByRole('button', { name: /create .*free account/i }))[0],
+    ).toBeInTheDocument();
+  });
+
+  it('navigates from the landing page to the LoginForm', async () => {
+    vi.mocked(api.authMe).mockRejectedValue(new Error('unauthorized'));
+    render(<App />);
+    const getStarted = (
+      await screen.findAllByRole('button', { name: /create .*free account/i })
+    )[0];
+    fireEvent.click(getStarted);
     expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
