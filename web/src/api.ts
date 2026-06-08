@@ -49,6 +49,7 @@ import type {
   WhitelistRule,
 } from '@zerospam/shared-api';
 import { ApiError, createApiClient } from '@zerospam/shared-api';
+import type { Connection } from './types';
 
 const client: ApiClient = createApiClient({
   credentials: 'include',
@@ -167,6 +168,11 @@ export const api = {
     handle(client.get<DomainSummary[]>('/api/domains')),
   domainDns: (id: number) =>
     handle(client.get<DomainDnsResponse>(`/api/domains/${id}/dns`)),
+
+  // connections (Gmail/Outlook aggregator)
+  connections: () => handle(client.get<Connection[]>('/api/connections')),
+  disconnect: (id: number) => handle(client.delete<{ ok: true }>(`/api/connections/${id}`)),
+  gmailConnectUrl: () => '/api/oauth/gmail/start',
 
   // dev: simulate inbound
   inject: (body: InjectRequest) => handle(client.post<unknown>(`/api/inject`, body)),
