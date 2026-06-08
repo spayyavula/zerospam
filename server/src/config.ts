@@ -1,7 +1,7 @@
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, hkdfSync } from 'node:crypto';
 
 function envInt(name: string, fallback: number): number {
   const v = process.env[name];
@@ -101,6 +101,11 @@ export const config = {
   isProd: process.env.NODE_ENV === 'production',
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? '',
   digestTickIntervalSec: envInt('DIGEST_TICK_INTERVAL_SEC', 60),
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+  },
+  connectionPollIntervalSec: envInt('CONNECTION_POLL_INTERVAL_SEC', 60),
   signupDomain: process.env.SIGNUP_DOMAIN ?? 'zero-spam.email',
   verifyTokenExpiryHours: envInt('VERIFY_TOKEN_EXPIRY_HOURS', 24),
 } as const;
@@ -134,4 +139,30 @@ export function assertPublicBaseUrlIfDigestEnabled(anyMailboxHasDigest: boolean)
       'PUBLIC_BASE_URL is unset but at least one mailbox has digest_enabled=1. Set PUBLIC_BASE_URL in env.',
     );
   }
+}
+
+// 32-byte key for the connection token vault (AES-256-GCM).
+// Mirrors loadDigestSigningSecret: env value (HKDF-stretched) or a generated file.
+export function loadConnectionSecret(): Buffer {
+  const fromEnv = process.env.CONNECTION_SECRET;
+  if (fromEnv && fromEnv.length > 0) {
+    return Buffer.from(
+      hkdfSync('sha256', Buffer.from(fromEnv, 'utf8'), Buffer.alloc(0), 'zerospam-connection-vault', 32),
+    );
+  }
+  mkdirSync(config.dataDir, { recursive: true });
+  const path = join(config.dataDir, '.connection-secret');
+  if (existsSync(path)) {
+    const persisted = readFileSync(path, 'utf8').trim();
+    if (persisted.length > 0) return Buffer.from(persisted, 'base64');
+  }
+  const raw = randomBytes(32);
+  writeFileSync(path, raw.toString('base64'), { mode: 0o600 });
+  return raw;
+}
+
+// Build the absolute redirect URI Google calls back. Requires PUBLIC_BASE_URL.
+export function gmailRedirectUri(): string {
+  if (!config.publicBaseUrl) throw new Error('PUBLIC_BASE_URL is unset; cannot build OAuth redirect URI');
+  return `${config.publicBaseUrl}/api/oauth/gmail/callback`;
 }
