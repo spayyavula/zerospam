@@ -15,6 +15,7 @@ import { sendMessage } from './sender.js';
 import { ensureDkim, dnsRecord } from './dkim.js';
 import { authRoutes } from './routes/auth.js';
 import { screenerRoutes } from './routes/screener.js';
+import { gmailOAuthRoutes } from './routes/oauth-gmail.js';
 import { requireAuth } from './requireAuth.js';
 import { getScreenerCounts } from './screener.js';
 
@@ -55,6 +56,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/api/auth/signup',
     '/auth/verify',
     '/public/digest/allow',
+    '/api/oauth/gmail/callback',
   ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
@@ -64,6 +66,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   await app.register(authRoutes);
   await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
+  await app.register(gmailOAuthRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
 
