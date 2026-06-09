@@ -7,6 +7,7 @@ vi.mock('../../api', () => ({
     connections: vi.fn(),
     disconnect: vi.fn(),
     gmailConnectUrl: () => '/api/oauth/gmail/start',
+    outlookConnectUrl: () => '/api/oauth/outlook/start',
   },
 }));
 import { api } from '../../api';
@@ -27,6 +28,12 @@ describe('ConnectionsPanel', () => {
     vi.mocked(api.connections).mockResolvedValue([]);
     render(<ConnectionsPanel />);
     expect(await screen.findByRole('link', { name: /connect gmail/i })).toBeInTheDocument();
+  });
+
+  it('shows a Connect Outlook button when empty', async () => {
+    vi.mocked(api.connections).mockResolvedValue([]);
+    render(<ConnectionsPanel />);
+    expect(await screen.findByRole('link', { name: /connect outlook/i })).toBeInTheDocument();
   });
 
   it('disconnects a connection after confirm', async () => {

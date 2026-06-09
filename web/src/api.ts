@@ -173,6 +173,7 @@ export const api = {
   connections: () => handle(client.get<Connection[]>('/api/connections')),
   disconnect: (id: number) => handle(client.delete<{ ok: true }>(`/api/connections/${id}`)),
   gmailConnectUrl: () => '/api/oauth/gmail/start',
+  outlookConnectUrl: () => '/api/oauth/outlook/start',
 
   // dev: simulate inbound
   inject: (body: InjectRequest) => handle(client.post<unknown>(`/api/inject`, body)),
