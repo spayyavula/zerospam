@@ -17,6 +17,15 @@ export interface GmailApi {
   getRawMessage(id: string): Promise<Buffer>;
 }
 
+// Minimal Microsoft Graph surface the connector calls. The real impl wraps
+// @microsoft/microsoft-graph-client; tests pass a stub.
+export interface GraphApi {
+  getProfile(): Promise<{ email: string }>;            // GET /me
+  seedCursor(): Promise<string>;                        // drain initial delta -> deltaLink token
+  listDelta(cursor: string): Promise<{ addedMessageIds: string[]; nextCursor: string }>;
+  getRawMessage(id: string): Promise<Buffer>;           // GET /messages/{id}/$value
+}
+
 // Exchanges/refreshes OAuth codes & tokens. Real impl wraps google-auth-library.
 export interface OAuthExchanger {
   exchangeCode(code: string): Promise<OAuthTokens>;
