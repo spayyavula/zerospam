@@ -105,6 +105,11 @@ export const config = {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   },
+  microsoft: {
+    clientId: process.env.MICROSOFT_CLIENT_ID ?? '',
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? '',
+    tenant: process.env.MICROSOFT_TENANT ?? 'common',
+  },
   connectionPollIntervalSec: envInt('CONNECTION_POLL_INTERVAL_SEC', 60),
   signupDomain: process.env.SIGNUP_DOMAIN ?? 'zero-spam.email',
   verifyTokenExpiryHours: envInt('VERIFY_TOKEN_EXPIRY_HOURS', 24),
@@ -165,4 +170,10 @@ export function loadConnectionSecret(): Buffer {
 export function gmailRedirectUri(): string {
   if (!config.publicBaseUrl) throw new Error('PUBLIC_BASE_URL is unset; cannot build OAuth redirect URI');
   return `${config.publicBaseUrl}/api/oauth/gmail/callback`;
+}
+
+// Absolute redirect URI Microsoft calls back. Requires PUBLIC_BASE_URL.
+export function outlookRedirectUri(): string {
+  if (!config.publicBaseUrl) throw new Error('PUBLIC_BASE_URL is unset; cannot build OAuth redirect URI');
+  return `${config.publicBaseUrl}/api/oauth/outlook/callback`;
 }
