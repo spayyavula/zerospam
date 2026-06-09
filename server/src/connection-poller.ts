@@ -7,6 +7,8 @@ import { ingest } from './ingest.js';
 import { config } from './config.js';
 import { GmailConnector } from './connectors/gmail.js';
 import { googleApiFor, googleExchanger } from './connectors/gmail-google.js';
+import { GraphConnector } from './connectors/graph.js';
+import { graphApiFor, msExchanger } from './connectors/graph-ms.js';
 import type { ProviderConnector } from './connectors/types.js';
 import {
   getDecryptedTokens, persistTokens, recordPollSuccess, recordPollFailure, markNeedsReconnect,
@@ -24,8 +26,17 @@ function isAuthError(e: unknown): boolean {
   return /401|unauthor|invalid_grant|invalid credentials/i.test(msg);
 }
 
-export async function tick(opts: { connector?: ProviderConnector; now: number }): Promise<void> {
-  const connector = opts.connector ?? new GmailConnector(googleApiFor, googleExchanger);
+type ConnectorRegistry = Partial<Record<'gmail' | 'outlook', ProviderConnector>>;
+
+function defaultRegistry(): ConnectorRegistry {
+  return {
+    gmail: new GmailConnector(googleApiFor, googleExchanger),
+    outlook: new GraphConnector(graphApiFor, msExchanger),
+  };
+}
+
+export async function tick(opts: { connectors?: ConnectorRegistry; now: number }): Promise<void> {
+  const registry = opts.connectors ?? defaultRegistry();
   const now = opts.now;
 
   const rows = db
@@ -40,6 +51,12 @@ export async function tick(opts: { connector?: ProviderConnector; now: number })
       | { address: string }
       | undefined;
     if (!mailbox) continue;
+
+    const connector = registry[conn.provider];
+    if (!connector) {
+      markNeedsReconnect(conn.id, `no connector registered for provider ${conn.provider}`);
+      continue;
+    }
 
     try {
       const stored = getDecryptedTokens(conn.id);
