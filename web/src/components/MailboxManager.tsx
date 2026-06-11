@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import type { Mailbox } from '../types';
 import { X, Plus, Trash2, ChevronDown, ChevronUp, Mail } from 'lucide-react';
+import ConnectionsPanel from './ConnectionsPanel';
 
 type Props = {
   onClose: () => void;
@@ -195,6 +196,9 @@ export default function MailboxManager({ onClose, onChanged }: Props) {
           })}
           {mailboxes.length === 0 && <li className="p-6 text-sm text-zsmuted">No mailboxes yet.</li>}
         </ul>
+        <div className="px-4 py-4 border-t border-zsborder">
+          <ConnectionsPanel />
+        </div>
       </div>
     </div>
   );

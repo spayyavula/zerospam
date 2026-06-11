@@ -11,5 +11,6 @@ web/dist/
 .vite/
 server/test-data/
 server/data/.digest-secret
+server/data/.connection-secret
 .superpowers/
 .worktrees/

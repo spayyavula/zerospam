@@ -11,6 +11,10 @@ vi.mock('../../api', () => ({
     createMailbox: vi.fn(),
     patchMailbox: vi.fn(),
     deleteMailbox: vi.fn(),
+    connections: vi.fn(),
+    disconnect: vi.fn(),
+    gmailConnectUrl: () => '/api/oauth/gmail/start',
+    outlookConnectUrl: () => '/api/oauth/outlook/start',
   },
 }));
 
@@ -43,6 +47,7 @@ describe('MailboxManager', () => {
     vi.mocked(api.createMailbox).mockResolvedValue({ id: 2 });
     vi.mocked(api.patchMailbox).mockResolvedValue({ ok: true });
     vi.mocked(api.deleteMailbox).mockResolvedValue({ ok: true });
+    vi.mocked(api.connections).mockResolvedValue([]);
   });
   afterEach(() => {
     vi.restoreAllMocks();

@@ -224,6 +224,36 @@ CREATE TABLE IF NOT EXISTS digest_tokens_used (
   token_hash  TEXT PRIMARY KEY,
   used_at     INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  email          TEXT NOT NULL,
+  code_hash      TEXT NOT NULL,
+  purpose        TEXT NOT NULL CHECK (purpose IN ('login','signup','password_set','sensitive_op')),
+  created_at     INTEGER NOT NULL,
+  expires_at     INTEGER NOT NULL,
+  consumed_at    INTEGER,
+  attempt_count  INTEGER NOT NULL DEFAULT 0,
+  signup_payload TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_otp_email_active ON otp_codes(email, consumed_at);
+
+CREATE TABLE IF NOT EXISTS connections (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id           INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  mailbox_id           INTEGER NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
+  provider             TEXT NOT NULL CHECK(provider IN ('gmail','outlook')),
+  access_enc           TEXT NOT NULL,
+  refresh_enc          TEXT NOT NULL,
+  expires_at           INTEGER NOT NULL,
+  cursor               TEXT,
+  status               TEXT NOT NULL CHECK(status IN ('active','needs_reconnect','paused')),
+  last_polled_at       INTEGER,
+  last_error           TEXT,
+  consecutive_failures INTEGER NOT NULL DEFAULT 0,
+  created_at           INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_connections_due ON connections(status, last_polled_at);
 `;
 
 db.exec(SCHEMA);
@@ -559,4 +589,20 @@ export type AuditLogEntry = {
   ip: string | null;
   user_agent: string | null;
   at: number;
+};
+
+export type Connection = {
+  id: number;
+  account_id: number;
+  mailbox_id: number;
+  provider: 'gmail' | 'outlook';
+  access_enc: string;
+  refresh_enc: string;
+  expires_at: number;
+  cursor: string | null;
+  status: 'active' | 'needs_reconnect' | 'paused';
+  last_polled_at: number | null;
+  last_error: string | null;
+  consecutive_failures: number;
+  created_at: number;
 };

@@ -17,6 +17,7 @@ vi.mock('nodemailer', () => ({
 // Keep this list in sync with the CREATE TABLE statements in db.ts.
 beforeEach(() => {
   db.exec(`
+    DELETE FROM connections;
     DELETE FROM messages_fts;
     DELETE FROM messages;
     DELETE FROM attachments;
@@ -34,6 +35,7 @@ beforeEach(() => {
     DELETE FROM users;
     DELETE FROM accounts WHERE id NOT IN (${DEFAULT_ACCOUNT_ID}, ${SYSTEM_ACCOUNT_ID});
     DELETE FROM digest_tokens_used;
+    DELETE FROM otp_codes;
   `);
 });
 

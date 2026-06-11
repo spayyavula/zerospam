@@ -15,6 +15,9 @@ import { sendMessage } from './sender.js';
 import { ensureDkim, dnsRecord } from './dkim.js';
 import { authRoutes } from './routes/auth.js';
 import { screenerRoutes } from './routes/screener.js';
+import { gmailOAuthRoutes } from './routes/oauth-gmail.js';
+import { outlookOAuthRoutes } from './routes/oauth-outlook.js';
+import { connectionsRoutes } from './routes/connections.js';
 import { requireAuth } from './requireAuth.js';
 import { getScreenerCounts } from './screener.js';
 
@@ -55,15 +58,29 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/api/auth/signup',
     '/auth/verify',
     '/public/digest/allow',
+    '/api/oauth/gmail/callback',
+    '/api/oauth/outlook/callback',
   ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
+    if (opts.inject) {
+      const a = req.headers['x-test-account'];
+      const u = req.headers['x-test-user'];
+      if (a) {
+        (req as any).account = { id: Number(a) };
+        (req as any).user = { id: Number(u ?? a) };
+        return;
+      }
+    }
     await requireAuth(req as any, reply as any);
   });
 
   await app.register(authRoutes);
   await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
+  await app.register(gmailOAuthRoutes);
+  await app.register(outlookOAuthRoutes);
+  await app.register(connectionsRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
 

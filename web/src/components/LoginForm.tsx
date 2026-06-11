@@ -6,8 +6,9 @@ import ThemeToggle from './ThemeToggle';
 type LoginFormProps = {
   onSuccess: () => void;
   onSwitchToSignup?: () => void;
+  onExit?: () => void;
 };
-export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProps) {
+export default function LoginForm({ onSuccess, onSwitchToSignup, onExit }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totp, setTotp] = useState('');
@@ -39,6 +40,16 @@ export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProp
     <div className="min-h-screen flex items-center justify-center bg-zsbg px-6">
       <ThemeToggle variant="floating" />
       <div className="w-full max-w-[380px]">
+        {onExit && (
+          <button
+            type="button"
+            onClick={onExit}
+            className="mb-5 text-xs tracking-[0.08em] text-zsmuted hover:text-zstext transition-colors"
+            aria-label="Exit sign in"
+          >
+            Exit
+          </button>
+        )}
         <div className="flex flex-col items-center text-center mb-10 select-none">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-zsaccent/30 to-zsaccent/10 ring-1 ring-zsaccent/30 flex items-center justify-center mb-5 shadow-[0_8px_24px_-8px_rgba(92,200,255,0.5)]">
             <Shield className="w-6 h-6 text-zsaccent" strokeWidth={2.25} />

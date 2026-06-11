@@ -13,11 +13,18 @@ function b64urlEncode(buf: Buffer): string {
 function b64urlDecode(s: string): Buffer | null {
   if (!/^[A-Za-z0-9_-]+$/.test(s)) return null;
   const padded = s + '='.repeat((4 - (s.length % 4)) % 4);
+  let buf: Buffer;
   try {
-    return Buffer.from(padded.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    buf = Buffer.from(padded.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
   } catch {
     return null;
   }
+  // Reject non-canonical encodings: the unused low bits of a base64url segment's
+  // final character are ignored on decode, so flipping it to an "equivalent" char
+  // yields identical bytes and a single-char tamper would slip past the HMAC check.
+  // Requiring round-trip equality closes that gap.
+  if (b64urlEncode(buf) !== s) return null;
+  return buf;
 }
 
 function mac(secret: string, payloadBuf: Buffer): Buffer {
