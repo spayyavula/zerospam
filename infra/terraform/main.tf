@@ -91,6 +91,13 @@ resource "aws_instance" "zerospam" {
     volume_type = "gp3"
   }
   tags = { Name = "zerospam" }
+
+  lifecycle {
+    # The instance is stateful (SQLite + raw mail live on the attached EBS volume).
+    # Don't let cloud-init edits or a newer "most_recent" AMI force a destroy/replace
+    # of the running mail server — rebuild deliberately (terraform taint) when needed.
+    ignore_changes = [user_data, ami]
+  }
 }
 
 resource "aws_eip" "zerospam" {
