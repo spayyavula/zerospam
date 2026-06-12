@@ -30,9 +30,9 @@
   --signal: #FFD52E;
   --signal-ink: #7A5C00;
   --danger: #B53C2F;
-  --font-display: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
-  --font-body: 'Geist', 'Helvetica Neue', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Geist Variable', 'Geist', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 :root[data-theme='light'] {

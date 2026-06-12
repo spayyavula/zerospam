@@ -26,9 +26,9 @@ export default {
         'signal-ink': 'var(--signal-ink)',
       },
       fontFamily: {
-        display: ['Source Serif 4', 'Iowan Old Style', 'Georgia', 'serif'],
-        body: ['Geist', 'Helvetica Neue', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
+        display: ['Source Serif 4 Variable', 'Source Serif 4', 'Iowan Old Style', 'Georgia', 'serif'],
+        body: ['Geist Variable', 'Geist', 'Helvetica Neue', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono Variable', 'JetBrains Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
     },
   },
