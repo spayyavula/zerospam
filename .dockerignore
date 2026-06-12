@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.production.example
+server/data
+.git
+.omc
+.claude
+infra
+docs
+**/*.tsbuildinfo
