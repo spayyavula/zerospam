@@ -1,0 +1,13 @@
+#cloud-config
+package_update: true
+packages: [docker.io, docker-compose-v2, awscli, jq, git, xfsprogs]
+runcmd:
+  - systemctl enable --now docker
+  # Mount the data volume (first attach is blank -> format once)
+  - [ bash, -lc, "if ! blkid /dev/nvme1n1; then mkfs.xfs /dev/nvme1n1; fi" ]
+  - mkdir -p /data
+  - [ bash, -lc, "echo '/dev/nvme1n1 /data xfs defaults,nofail 0 2' >> /etc/fstab" ]
+  - mount -a
+  - [ bash, -lc, "git clone ${repo_url} /opt/zerospam || (cd /opt/zerospam && git pull)" ]
+  - [ bash, -lc, "cd /opt/zerospam && AWS_REGION=${region} bash scripts/entrypoint.sh /data/app.env" ]
+  - [ bash, -lc, "cd /opt/zerospam && docker compose up -d --build" ]
