@@ -113,6 +113,9 @@ export const config = {
   connectionPollIntervalSec: envInt('CONNECTION_POLL_INTERVAL_SEC', 60),
   signupDomain: process.env.SIGNUP_DOMAIN ?? 'zero-spam.email',
   verifyTokenExpiryHours: envInt('VERIFY_TOKEN_EXPIRY_HOURS', 24),
+  // Absolute path to the built web SPA (web/dist). Served in production by
+  // @fastify/static. Overridable for the Docker image layout via WEB_DIST_PATH.
+  webDistPath: process.env.WEB_DIST_PATH ?? resolve(SERVER_ROOT, '..', 'web', 'dist'),
 } as const;
 
 export type Config = typeof config;
