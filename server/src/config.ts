@@ -116,6 +116,12 @@ export const config = {
   // Absolute path to the built web SPA (web/dist). Served in production by
   // @fastify/static. Overridable for the Docker image layout via WEB_DIST_PATH.
   webDistPath: process.env.WEB_DIST_PATH ?? resolve(SERVER_ROOT, '..', 'web', 'dist'),
+  // Inbound SMTP STARTTLS cert/key (PEM file paths). When both are set, the
+  // SMTP server offers STARTTLS; otherwise it runs plaintext (dev/test).
+  tls: {
+    certPath: process.env.TLS_CERT_PATH ?? '',
+    keyPath: process.env.TLS_KEY_PATH ?? '',
+  },
 } as const;
 
 export type Config = typeof config;
