@@ -20,6 +20,7 @@ import { screenerRoutes } from './routes/screener.js';
 import { gmailOAuthRoutes } from './routes/oauth-gmail.js';
 import { outlookOAuthRoutes } from './routes/oauth-outlook.js';
 import { connectionsRoutes } from './routes/connections.js';
+import { renderPrivacyPolicyPage, renderTermsOfServicePage } from './legal-pages.js';
 import { requireAuth } from './requireAuth.js';
 import { getScreenerCounts } from './screener.js';
 
@@ -107,6 +108,16 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   await app.register(gmailOAuthRoutes);
   await app.register(outlookOAuthRoutes);
   await app.register(connectionsRoutes);
+
+  app.get('/privacy-policy', async (_req, reply) => {
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return reply.send(renderPrivacyPolicyPage());
+  });
+
+  app.get('/terms-of-service', async (_req, reply) => {
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return reply.send(renderTermsOfServicePage());
+  });
 
   app.get('/api/health', async () => ({ ok: true }));
 

@@ -22,7 +22,7 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
       <header className="px-4 sm:px-6 lg:px-8 py-6 border-b border-zsborder">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-zsaccent" />
+            <img src="/shield-blue.svg" alt="ZeroSpam shield" className="w-8 h-8" />
             <span className="text-2xl font-bold">ZeroSpam.email</span>
           </div>
           <button
@@ -393,10 +393,10 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
             <span className="font-semibold">ZeroSpam.email</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-zsmuted">
-            <a href="#" className="hover:text-zsaccent transition">
+            <a href="/privacy-policy" className="hover:text-zsaccent transition">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-zsaccent transition">
+            <a href="/terms-of-service" className="hover:text-zsaccent transition">
               Terms of Service
             </a>
             <a href="https://github.com" className="hover:text-zsaccent transition inline-flex items-center gap-1">
