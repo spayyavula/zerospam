@@ -139,7 +139,7 @@ export default function ReadingPane({ messageId, onChanged, onReply }: Props) {
   const renderHtml = hasHtml && !forceText;
 
   return (
-    <article className="h-full flex flex-col">
+    <article className="h-full flex flex-col bg-paper text-ink">
       {risk && (
         <div className="bg-zsdanger/10 border-b border-zsdanger/30 px-4 py-2 text-sm flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-zsdanger shrink-0" />
@@ -178,10 +178,10 @@ export default function ReadingPane({ messageId, onChanged, onReply }: Props) {
         </div>
       )}
 
-      <header className="px-6 py-4 border-b border-zsborder">
+      <header className="px-6 py-4 border-b-2 border-rule-strong">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold truncate">{msg.subject || '(no subject)'}</h1>
+            <h1 className="font-display text-2xl leading-tight">{msg.subject || '(no subject)'}</h1>
             <div className="mt-1 text-sm">
               <span className="font-medium">{msg.from_name || msg.from_address}</span>
               {msg.from_name && <span className="text-zsmuted"> &lt;{msg.from_address}&gt;</span>}
@@ -191,12 +191,12 @@ export default function ReadingPane({ messageId, onChanged, onReply }: Props) {
             </div>
             <div className="mt-2 flex items-center gap-3 flex-wrap">
               {isTrust ? (
-                <span className="inline-flex items-center gap-1 text-xs text-zsok">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  whitelist · {msg.whitelist_match}
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.1em] uppercase bg-signal text-signal-ink px-1.5 py-0.5">
+                  <ShieldCheck className="w-3 h-3" />
+                  Trusted
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-xs text-zsmuted">no whitelist match</span>
+                <span className="inline-flex items-center gap-1 text-xs text-quiet">no whitelist match</span>
               )}
               {authChip('SPF', msg.spf_pass)}
               {authChip('DKIM', msg.dkim_pass)}
@@ -337,7 +337,7 @@ export default function ReadingPane({ messageId, onChanged, onReply }: Props) {
             className="w-full h-full bg-zsbg"
           />
         ) : msg.body_text ? (
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed px-6 py-4 overflow-auto h-full">
+          <pre className="whitespace-pre-wrap font-body text-[15px] leading-7 text-ink-soft px-6 py-6 max-w-[72ch] mx-auto overflow-auto h-full">
             {msg.body_text}
           </pre>
         ) : msg.body_html ? (
