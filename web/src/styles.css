@@ -30,9 +30,9 @@
   --signal: #FFD52E;
   --signal-ink: #7A5C00;
   --danger: #B53C2F;
-  --font-display: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
-  --font-body: 'Geist', 'Helvetica Neue', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Geist Variable', 'Geist', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 :root[data-theme='light'] {
@@ -45,6 +45,23 @@
   --zsdanger: 220 38 38;     /* #dc2626 */
   --zsok: 22 163 74;         /* #16a34a */
   color-scheme: light;
+}
+
+/* Ink & Signal — dark "ink" variant. The light/paper values live in :root (the
+ * default); this overrides only the editorial tokens for dark mode. Signal-yellow
+ * stays #FFD52E in both themes (with ink-colored text on it). */
+:root[data-theme='dark'] {
+  --paper: #0E0E0C;
+  --paper-deep: #16160F;
+  --ink: #F3EFE4;
+  --ink-soft: #CFC9BC;
+  --quiet: #9A958A;
+  --rule: #2A2A26;
+  --rule-strong: #F3EFE4;
+  --signal: #FFD52E;
+  --signal-ink: #0E0E0C;
+  --danger: #E5685B;
+  color-scheme: dark;
 }
 
 html, body, #root { height: 100%; }

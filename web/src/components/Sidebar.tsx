@@ -1,26 +1,11 @@
-import {
-  Eye,
-  Inbox,
-  ShieldAlert,
-  Send,
-  Trash2,
-  ListChecks,
-  Beaker,
-  Flame,
-  PenLine,
-  Key,
-  FileText,
-  Tag,
-} from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, PenLine } from 'lucide-react';
 import type { Counts, SidebarFolder } from '../types';
 
-const folders: { key: SidebarFolder; label: string; icon: any }[] = [
-  { key: 'screener', label: 'Screener', icon: Eye },
-  { key: 'inbox', label: 'Inbox', icon: Inbox },
-  { key: 'quarantine', label: 'Quarantine', icon: ShieldAlert },
-  { key: 'sent', label: 'Sent', icon: Send },
-  { key: 'drafts', label: 'Drafts', icon: FileText },
-  { key: 'trash', label: 'Trash', icon: Trash2 },
+const PRIMARY: { key: SidebarFolder; label: string }[] = [
+  { key: 'inbox', label: 'Inbox' },
+  { key: 'screener', label: 'Screener' },
+  { key: 'sent', label: 'Sent' },
 ];
 
 type Props = {
@@ -35,99 +20,85 @@ type Props = {
   onAliases: () => void;
 };
 
-export default function Sidebar({
-  counts,
-  folder,
-  onFolder,
-  onCompose,
-  onWhitelist,
-  onInject,
-  onPurge,
-  onDkim,
-  onAliases,
-}: Props) {
-  return (
-    <aside className="w-56 border-r border-zsborder bg-zspanel flex flex-col">
-      <div className="p-3">
-        <button
-          onClick={onCompose}
-          className="w-full inline-flex items-center justify-center gap-2 bg-zsaccent text-zsbg font-medium rounded py-2 text-sm hover:opacity-90"
-        >
-          <PenLine className="w-4 h-4" />
-          Compose
-        </button>
-      </div>
+export default function Sidebar(p: Props) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const screenerCount = p.counts?.screener?.total ?? 0; // Counts.screener is { total, unread }
 
-      <div className="px-3 py-1 text-xs uppercase tracking-wider text-zsmuted">Folders</div>
-      <nav className="flex-1 px-2 space-y-0.5">
-        {folders.map((f) => {
-          const Icon = f.icon;
-          const c = counts?.[f.key];
-          const active = f.key === folder;
+  const moreItems: [string, () => void][] = [
+    ['Quarantine', () => p.onFolder('quarantine')],
+    ['Drafts', () => p.onFolder('drafts')],
+    ['Trash', () => p.onFolder('trash')],
+    ['Whitelist', p.onWhitelist],
+    ['Aliases', p.onAliases],
+    ['DKIM / DNS', p.onDkim],
+    ['Test injector', p.onInject],
+    ['Purge quarantine', p.onPurge],
+  ];
+
+  return (
+    <nav className="flex items-center gap-6 px-6 h-14 bg-paper border-b-2 border-rule-strong text-ink shrink-0">
+      <span className="font-display font-bold tracking-tight select-none">Zero·Spam</span>
+
+      <div className="flex items-center gap-5 font-mono text-[11px] tracking-[0.12em] uppercase">
+        {PRIMARY.map(({ key, label }) => {
+          const active = p.folder === key;
           return (
             <button
-              key={f.key}
-              onClick={() => onFolder(f.key)}
-              data-tour={
-                f.key === 'screener'
-                  ? 'sidebar-screener'
-                  : f.key === 'quarantine'
-                    ? 'sidebar-quarantine'
-                    : undefined
-              }
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm
-                ${active ? 'bg-zsaccent/10 text-zsaccent' : 'hover:bg-zsborder/40 text-zstext'}`}
+              key={key}
+              onClick={() => p.onFolder(key)}
+              data-tour={key === 'screener' ? 'sidebar-screener' : undefined}
+              aria-current={active ? 'page' : undefined}
+              className={active ? 'text-ink border-b-2 border-ink pb-0.5' : 'text-quiet hover:text-ink transition-colors'}
             >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span className="flex-1 text-left">{f.label}</span>
-              {c && c.unread > 0 && (
-                <span className="text-xs px-1.5 rounded bg-zsaccent text-zsbg font-semibold">
-                  {c.unread}
+              {label}
+              {key === 'screener' && screenerCount > 0 && (
+                <span className="ml-1.5 bg-signal text-signal-ink rounded-full px-1.5 py-px text-[10px] align-middle">
+                  {screenerCount}
                 </span>
-              )}
-              {c && c.unread === 0 && c.total > 0 && (
-                <span className="text-xs text-zsmuted">{c.total}</span>
               )}
             </button>
           );
         })}
-      </nav>
-
-      <div className="px-3 py-2 text-xs uppercase tracking-wider text-zsmuted">Tools</div>
-      <div className="px-2 pb-3 space-y-0.5">
-        <SidebarBtn icon={ListChecks} label="Whitelist" onClick={onWhitelist} dataTour="tool-whitelist" />
-        <SidebarBtn icon={Tag} label="Aliases" onClick={onAliases} />
-        <SidebarBtn icon={Beaker} label="Test Injector" onClick={onInject} />
-        <SidebarBtn icon={Key} label="DKIM / DNS" onClick={onDkim} />
-        <SidebarBtn icon={Flame} label="Purge Quarantine" onClick={onPurge} danger />
       </div>
-    </aside>
-  );
-}
 
-function SidebarBtn({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-  dataTour,
-}: {
-  icon: any;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-  dataTour?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      data-tour={dataTour}
-      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm ${
-        danger ? 'text-zsdanger hover:bg-zsdanger/10' : 'hover:bg-zsborder/40'
-      }`}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
+      <div className="flex-1" />
+
+      <button
+        onClick={p.onCompose}
+        className="font-mono text-[11px] tracking-[0.1em] uppercase bg-signal text-signal-ink border-2 border-rule-strong px-3 py-1.5 inline-flex items-center gap-1 hover:brightness-95"
+      >
+        <PenLine className="w-3.5 h-3.5" /> Compose
+      </button>
+
+      <div className="relative">
+        <button
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-haspopup="menu"
+          className="font-mono text-[11px] tracking-[0.1em] uppercase text-quiet hover:text-ink inline-flex items-center gap-1"
+        >
+          More <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+        {moreOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full mt-1 bg-paper border-2 border-rule-strong min-w-[180px] z-30 text-sm shadow-[4px_4px_0_rgba(0,0,0,0.08)]"
+          >
+            {moreItems.map(([label, fn]) => (
+              <button
+                key={label}
+                role="menuitem"
+                onClick={() => {
+                  setMoreOpen(false);
+                  fn();
+                }}
+                className="block w-full text-left px-3 py-2 hover:bg-paper-deep text-ink"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </nav>
   );
 }

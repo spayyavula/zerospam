@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { BulkAction, FolderName, MessageSummary } from '../types';
 import { senderRisk } from '../utils/sender';
+import { groupBySender } from '../utils/groupBySender';
 
 export type ListFilter = 'all' | 'unread' | 'starred' | 'attachments';
 
@@ -90,7 +91,7 @@ export default function MessageList({
   const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
 
   return (
-    <section className="w-96 border-r border-zsborder bg-zspanel/60 flex flex-col">
+    <section className="w-96 border-r border-rule bg-paper text-ink flex flex-col">
       <div className="h-12 px-3 border-b border-zsborder flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-zsmuted" />
@@ -175,70 +176,80 @@ export default function MessageList({
           </li>
         )}
 
-        {filtered.map((m) => {
-          const isSelected = m.id === selectedId;
-          const inSelection = selectedIds.has(m.id);
-          const ttl = ttlBadge(m.expires_at);
-          const risk = senderRisk(m.from_name, m.from_address);
+        {groupBySender(filtered).map((group) => (
+          <li key={group.address} className="border-t-2 border-rule-strong first:border-t-0">
+            <div className="px-4 pt-3 pb-1.5 font-display text-[15px] leading-tight text-ink truncate">
+              {group.name || group.address}
+            </div>
+            <ul>
+              {group.messages.map((m) => {
+                const isSelected = m.id === selectedId;
+                const inSelection = selectedIds.has(m.id);
+                const ttl = ttlBadge(m.expires_at);
+                const risk = senderRisk(m.from_name, m.from_address);
+                return (
+                  <li
+                    key={m.id}
+                    ref={isSelected ? activeRowRef : null}
+                    onClick={() => onSelect(m.id)}
+                    className={`px-4 py-2 border-t border-rule cursor-pointer fade-in flex items-start gap-2.5
+                      ${isSelected ? 'bg-paper-deep border-l-2 border-l-rule-strong' : 'hover:bg-paper-deep'}
+                      ${inSelection && !isSelected ? 'bg-paper-deep' : ''}`}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleSelect(m.id);
+                      }}
+                      className="mt-1 p-0.5 text-quiet hover:text-ink"
+                      title="Select for bulk actions (x)"
+                    >
+                      {inSelection ? <CheckSquare className="w-3.5 h-3.5 text-ink" /> : <Square className="w-3.5 h-3.5" />}
+                    </button>
 
-          return (
-            <li
-              key={m.id}
-              ref={isSelected ? activeRowRef : null}
-              onClick={() => onSelect(m.id)}
-              className={`px-3 py-2.5 border-b border-zsborder/60 cursor-pointer fade-in flex items-start gap-2
-                ${isSelected ? 'bg-zsaccent/10' : 'hover:bg-zsborder/30'}
-                ${inSelection ? 'bg-zsaccent/5' : ''}`}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleSelect(m.id);
-                }}
-                className="mt-1 p-0.5 text-zsmuted hover:text-zstext"
-                title="Select for bulk actions (x)"
-              >
-                {inSelection ? <CheckSquare className="w-3.5 h-3.5 text-zsaccent" /> : <Square className="w-3.5 h-3.5" />}
-              </button>
+                    <span
+                      className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${m.read ? 'bg-transparent' : 'bg-signal'}`}
+                      aria-label={m.read ? undefined : 'unread'}
+                    />
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-sm truncate ${m.read ? 'text-zsmuted' : 'text-zstext font-semibold'}`}>
-                    {m.from_name || m.from_address}
-                  </span>
-                  {m.starred ? <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 shrink-0" /> : null}
-                  {m.whitelist_match && <ShieldCheck className="w-3.5 h-3.5 text-zsok shrink-0" />}
-                  {risk && <ShieldAlert className="w-3.5 h-3.5 text-zsdanger shrink-0" aria-label={risk} />}
-                  {m.attachment_count > 0 && <Paperclip className="w-3.5 h-3.5 text-zsmuted shrink-0" />}
-                  <span className="ml-auto text-xs text-zsmuted shrink-0">
-                    {formatDistanceToNowStrict(new Date(m.received_at), { addSuffix: false })}
-                  </span>
-                </div>
-                <div className={`text-sm truncate mt-0.5 ${m.read ? 'text-zsmuted' : 'text-zstext'}`}>
-                  {m.subject || '(no subject)'}
-                </div>
-                <div className="text-xs text-zsmuted truncate mt-0.5">{m.preview}</div>
-                <div className="mt-1 flex items-center gap-2 text-[11px]">
-                  {searchActive && (
-                    <span className="px-1.5 py-0.5 rounded bg-zsborder/40 text-zsmuted capitalize">{m.folder}</span>
-                  )}
-                  {ttl && (
-                    <span className="inline-flex items-center gap-1 text-zsdanger">
-                      <Clock className="w-3 h-3" />
-                      {ttl}
-                    </span>
-                  )}
-                  {risk && (
-                    <span className="inline-flex items-center gap-1 text-zsdanger truncate" title={risk}>
-                      <ShieldAlert className="w-3 h-3" />
-                      sender mismatch
-                    </span>
-                  )}
-                </div>
-              </div>
-            </li>
-          );
-        })}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-sm truncate ${m.read ? 'text-quiet' : 'text-ink font-semibold'}`}>
+                          {m.subject || '(no subject)'}
+                        </span>
+                        {m.starred ? <Star className="w-3.5 h-3.5 text-signal fill-signal shrink-0" /> : null}
+                        {m.whitelist_match && <ShieldCheck className="w-3.5 h-3.5 text-zsok shrink-0" />}
+                        {risk && <ShieldAlert className="w-3.5 h-3.5 text-zsdanger shrink-0" aria-label={risk} />}
+                        {m.attachment_count > 0 && <Paperclip className="w-3.5 h-3.5 text-quiet shrink-0" />}
+                        <span className="ml-auto font-mono text-[10px] text-quiet shrink-0">
+                          {formatDistanceToNowStrict(new Date(m.received_at), { addSuffix: false })}
+                        </span>
+                      </div>
+                      <div className="text-xs text-quiet truncate mt-0.5">{m.preview}</div>
+                      <div className="mt-1 flex items-center gap-2 text-[11px]">
+                        {searchActive && (
+                          <span className="px-1.5 py-0.5 rounded bg-paper-deep text-quiet capitalize">{m.folder}</span>
+                        )}
+                        {ttl && (
+                          <span className="inline-flex items-center gap-1 text-zsdanger">
+                            <Clock className="w-3 h-3" />
+                            {ttl}
+                          </span>
+                        )}
+                        {risk && (
+                          <span className="inline-flex items-center gap-1 text-zsdanger truncate" title={risk}>
+                            <ShieldAlert className="w-3 h-3" />
+                            sender mismatch
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ))}
       </ul>
     </section>
   );
