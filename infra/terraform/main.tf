@@ -62,9 +62,14 @@ resource "aws_iam_role_policy" "ssm_read" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect   = "Allow",
-      Action   = ["ssm:GetParametersByPath", "ssm:GetParameter", "ssm:GetParameters"],
-      Resource = "arn:aws:ssm:${var.region}:*:parameter/zerospam/prod/*"
+      Effect = "Allow",
+      Action = ["ssm:GetParametersByPath", "ssm:GetParameter", "ssm:GetParameters"],
+      # GetParametersByPath authorizes against the PATH node itself, not just the
+      # children — so both ARNs are required (the bare path AND the /* wildcard).
+      Resource = [
+        "arn:aws:ssm:${var.region}:*:parameter/zerospam/prod",
+        "arn:aws:ssm:${var.region}:*:parameter/zerospam/prod/*"
+      ]
     }]
   })
 }
@@ -80,7 +85,7 @@ resource "aws_instance" "zerospam" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.zerospam.id]
   iam_instance_profile   = aws_iam_instance_profile.instance.name
-  user_data              = templatefile("${path.module}/cloud-init.yaml.tftpl", { repo_url = var.repo_url, region = var.region })
+  user_data              = templatefile("${path.module}/cloud-init.yaml.tftpl", { repo_url = var.repo_url, region = var.region, deploy_branch = var.deploy_branch })
   root_block_device {
     volume_size = 16
     volume_type = "gp3"

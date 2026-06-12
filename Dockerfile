@@ -13,6 +13,10 @@ COPY apps/mobile/package*.json apps/mobile/
 RUN npm ci --include-workspace-root \
       --workspace=@zerospam/shared-api --workspace=web --workspace=server
 COPY . .
+# Node auto-sizes V8's heap from physical RAM; on small build hosts (e.g. a 2 GB
+# instance) tsc/vite exceed that cap and abort (code 134) even with free swap.
+# Raise it explicitly so the image builds on small instances.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build:shared-api \
  && npm run build --workspace=web \
  && npm run build --workspace=server

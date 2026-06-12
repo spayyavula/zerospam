@@ -1,13 +1,18 @@
 #cloud-config
 package_update: true
-packages: [docker.io, docker-compose-v2, awscli, jq, git, xfsprogs]
+packages: [docker.io, docker-compose-v2, jq, git, xfsprogs, unzip, curl]
 runcmd:
   - systemctl enable --now docker
   # Mount the data volume (first attach is blank -> format once)
   - [ bash, -lc, "if ! blkid /dev/nvme1n1; then mkfs.xfs /dev/nvme1n1; fi" ]
   - mkdir -p /data
-  - [ bash, -lc, "echo '/dev/nvme1n1 /data xfs defaults,nofail 0 2' >> /etc/fstab" ]
+  - [ bash, -lc, "grep -q ' /data ' /etc/fstab || echo '/dev/nvme1n1 /data xfs defaults,nofail 0 2' >> /etc/fstab" ]
   - mount -a
-  - [ bash, -lc, "git clone ${repo_url} /opt/zerospam || (cd /opt/zerospam && git pull)" ]
+  # Swap so the in-place image build (tsc/vite) doesn't OOM on a small instance
+  - [ bash, -lc, "if ! swapon --show | grep -q /swapfile; then fallocate -l 5G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile; fi" ]
+  # AWS CLI v2 — the apt 'awscli' package is unreliable on Ubuntu 24.04; use the
+  # official arch-aware bundle ($(uname -m) is aarch64 on t4g / x86_64 on t3).
+  - [ bash, -lc, "command -v aws || (curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip -o /tmp/awscliv2.zip && cd /tmp && unzip -q awscliv2.zip && ./aws/install)" ]
+  - [ bash, -lc, "git clone --branch ${deploy_branch} ${repo_url} /opt/zerospam || (cd /opt/zerospam && git fetch origin && git checkout ${deploy_branch} && git pull)" ]
   - [ bash, -lc, "cd /opt/zerospam && AWS_REGION=${region} bash scripts/entrypoint.sh /data/app.env" ]
   - [ bash, -lc, "cd /opt/zerospam && docker compose up -d --build" ]

@@ -28,6 +28,12 @@ variable "repo_url" {
   type        = string
 }
 
+variable "deploy_branch" {
+  description = "Branch the instance checks out and deploys (the deploy files live here until merged to the default branch)."
+  type        = string
+  default     = "master"
+}
+
 variable "data_volume_gb" {
   type    = number
   default = 20
