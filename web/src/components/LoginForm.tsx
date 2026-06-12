@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
-import { Shield } from 'lucide-react';
+import { Shield, Eye, EyeOff } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
 type LoginFormProps = {
@@ -11,6 +11,7 @@ type LoginFormProps = {
 export default function LoginForm({ onSuccess, onSwitchToSignup, onExit }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [totp, setTotp] = useState('');
   const [needsTotp, setNeedsTotp] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -87,16 +88,28 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onExit }: Login
             label="Password"
             disabled={needsTotp || busy}
           >
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={needsTotp || busy}
-              className="w-full bg-transparent text-[15px] text-zstext placeholder-zsmuted/60 focus:outline-none disabled:opacity-60"
-              placeholder="••••••••"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={needsTotp || busy}
+                className="flex-1 min-w-0 bg-transparent text-[15px] text-zstext placeholder-zsmuted/60 focus:outline-none disabled:opacity-60"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                disabled={needsTotp || busy}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+                className="shrink-0 -my-1 p-1 text-zsmuted hover:text-zstext transition-colors focus:outline-none focus-visible:text-zstext disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </Field>
 
           {needsTotp && (
