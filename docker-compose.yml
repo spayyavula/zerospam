@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    image: zerospam:local
+    restart: unless-stopped
+    env_file:
+      - /data/app.env
+    ports:
+      - "25:25"      # inbound SMTP
+    volumes:
+      - /data:/data
+      - caddy_data:/certs:ro   # Caddy-issued cert/key, read-only for STARTTLS
+    depends_on:
+      - caddy
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

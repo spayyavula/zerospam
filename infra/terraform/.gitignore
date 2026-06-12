@@ -1,0 +1,8 @@
+# Terraform working files — never commit
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+# Real var files hold secrets/IPs; commit only the .example
+terraform.tfvars
+*.auto.tfvars

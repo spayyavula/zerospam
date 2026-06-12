@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import type { FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
@@ -20,6 +22,25 @@ import { outlookOAuthRoutes } from './routes/oauth-outlook.js';
 import { connectionsRoutes } from './routes/connections.js';
 import { requireAuth } from './requireAuth.js';
 import { getScreenerCounts } from './screener.js';
+
+/**
+ * Serve the built web SPA (web/dist): static files first, then a catch-all
+ * not-found handler that returns index.html for client-side routes. Only
+ * GET/HEAD requests outside the server's own route prefixes get the SPA;
+ * unknown /api, /auth, /public routes still return a JSON 404.
+ */
+export async function registerWebSpa(app: FastifyInstance, root: string): Promise<void> {
+  await app.register(fastifyStatic, { root, wildcard: false });
+
+  const SERVER_PREFIXES = ['/api', '/auth/', '/public/'];
+  app.setNotFoundHandler((req, reply) => {
+    const isServerRoute = SERVER_PREFIXES.some((p) => req.url === p || req.url.startsWith(p));
+    if ((req.method === 'GET' || req.method === 'HEAD') && !isServerRoute) {
+      return reply.type('text/html').sendFile('index.html');
+    }
+    return reply.code(404).send({ error: 'not found' });
+  });
+}
 
 export async function startApi(opts: { inject?: boolean } = {}) {
   const app = Fastify({ logger: { level: config.logLevel } });
@@ -63,6 +84,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
+    // Static assets and SPA navigation (anything that is not a server route)
+    // are public — only server routes go through auth.
+    const SERVER_PREFIXES = ['/api', '/auth/', '/public/'];
+    const isServerRoute = SERVER_PREFIXES.some((p) => req.url === p || req.url.startsWith(p));
+    if (!isServerRoute && (req.method === 'GET' || req.method === 'HEAD')) return;
     if (opts.inject) {
       const a = req.headers['x-test-account'];
       const u = req.headers['x-test-user'];
@@ -1384,6 +1410,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     const r = await ingest(raw, body.to);
     return r ?? { error: 'no such mailbox' };
   });
+
+  // Serve the built SPA in non-test runs. (Tests use opts.inject and exercise
+  // registerWebSpa directly against a temp dir.)
+  await registerWebSpa(app, config.webDistPath);
 
   if (opts.inject) {
     await app.ready();
