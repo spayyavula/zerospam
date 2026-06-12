@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "seed": "tsx --env-file-if-exists=.env src/seed.ts",
+    "seed:test-users": "tsx --env-file-if-exists=.env src/seed-test-users.ts",
     "inject": "tsx --env-file-if-exists=.env src/inject.ts",
     "test": "vitest run",
     "test:watch": "vitest"
