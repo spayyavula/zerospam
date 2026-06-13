@@ -48,10 +48,19 @@ the repo:
    ```
 2. In the wizard, connect the **GitHub integration** and authorize this repo
    (`spayyavula/zerospam`) so the `gh-*` workflows can read issues and open PRs.
-3. Configure a sandbox provider and at least one LLM provider key. The workflows
-   route to **OpenAI** (`gpt-5.5` for heavy steps, `gpt-5.4-mini` for `Simplify`/
-   `Fixup`); change the `model_stylesheet` / node `model=` attributes if your
-   Fabro instance is configured with different providers/models.
+3. Configure at least one LLM provider key. The workflows route to **OpenAI**
+   (`gpt-5.5` for heavy steps, `gpt-5.4-mini` for `Simplify`/`Fixup`); change the
+   `model_stylesheet` / node `model=` attributes if your Fabro instance uses
+   different providers/models.
+4. **Build the local sandbox image** (the default environment, `zerospam-mobile-local`,
+   is a local Docker sandbox; the docker provider runs prebuilt images only):
+   ```bash
+   docker build -t zerospam-mobile:local -f .fabro/Dockerfile .fabro
+   ```
+   This bakes Node 22 + Flutter stable (Dart) + JDK 17 (~1.2GB). To use Daytona
+   cloud instead — which builds `.fabro/Dockerfile` into a snapshot, no pre-build —
+   set `run.environment.id = "zerospam-mobile"` in `project.toml` and configure a
+   Daytona key (`fabro secret set DAYTONA_API_KEY ...`).
 
 ## Run
 
