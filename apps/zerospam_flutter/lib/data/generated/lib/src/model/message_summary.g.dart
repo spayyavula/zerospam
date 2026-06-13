@@ -32,11 +32,11 @@ MessageSummaryFolderEnum _$messageSummaryFolderEnumValueOf(String name) {
 
 final BuiltSet<MessageSummaryFolderEnum> _$messageSummaryFolderEnumValues =
     BuiltSet<MessageSummaryFolderEnum>(const <MessageSummaryFolderEnum>[
-  _$messageSummaryFolderEnum_inbox,
-  _$messageSummaryFolderEnum_quarantine,
-  _$messageSummaryFolderEnum_sent,
-  _$messageSummaryFolderEnum_trash,
-]);
+      _$messageSummaryFolderEnum_inbox,
+      _$messageSummaryFolderEnum_quarantine,
+      _$messageSummaryFolderEnum_sent,
+      _$messageSummaryFolderEnum_trash,
+    ]);
 
 Serializer<MessageSummaryFolderEnum> _$messageSummaryFolderEnumSerializer =
     _$MessageSummaryFolderEnumSerializer();
@@ -62,16 +62,20 @@ class _$MessageSummaryFolderEnumSerializer
   final String wireName = 'MessageSummaryFolderEnum';
 
   @override
-  Object serialize(Serializers serializers, MessageSummaryFolderEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    MessageSummaryFolderEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   MessageSummaryFolderEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      MessageSummaryFolderEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => MessageSummaryFolderEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$MessageSummary extends MessageSummary {
@@ -107,22 +111,22 @@ class _$MessageSummary extends MessageSummary {
   factory _$MessageSummary([void Function(MessageSummaryBuilder)? updates]) =>
       (MessageSummaryBuilder()..update(updates))._build();
 
-  _$MessageSummary._(
-      {required this.id,
-      required this.mailboxId,
-      required this.folder,
-      required this.fromAddress,
-      this.fromName,
-      required this.toAddresses,
-      this.subject,
-      this.preview,
-      required this.receivedAt,
-      this.expiresAt,
-      required this.read,
-      required this.starred,
-      required this.sizeBytes,
-      required this.attachmentCount})
-      : super._();
+  _$MessageSummary._({
+    required this.id,
+    required this.mailboxId,
+    required this.folder,
+    required this.fromAddress,
+    this.fromName,
+    required this.toAddresses,
+    this.subject,
+    this.preview,
+    required this.receivedAt,
+    this.expiresAt,
+    required this.read,
+    required this.starred,
+    required this.sizeBytes,
+    required this.attachmentCount,
+  }) : super._();
   @override
   MessageSummary rebuild(void Function(MessageSummaryBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -293,32 +297,63 @@ class MessageSummaryBuilder
   MessageSummary build() => _build();
 
   _$MessageSummary _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$MessageSummary._(
           id: BuiltValueNullFieldError.checkNotNull(
-              id, r'MessageSummary', 'id'),
+            id,
+            r'MessageSummary',
+            'id',
+          ),
           mailboxId: BuiltValueNullFieldError.checkNotNull(
-              mailboxId, r'MessageSummary', 'mailboxId'),
+            mailboxId,
+            r'MessageSummary',
+            'mailboxId',
+          ),
           folder: BuiltValueNullFieldError.checkNotNull(
-              folder, r'MessageSummary', 'folder'),
+            folder,
+            r'MessageSummary',
+            'folder',
+          ),
           fromAddress: BuiltValueNullFieldError.checkNotNull(
-              fromAddress, r'MessageSummary', 'fromAddress'),
+            fromAddress,
+            r'MessageSummary',
+            'fromAddress',
+          ),
           fromName: fromName,
           toAddresses: BuiltValueNullFieldError.checkNotNull(
-              toAddresses, r'MessageSummary', 'toAddresses'),
+            toAddresses,
+            r'MessageSummary',
+            'toAddresses',
+          ),
           subject: subject,
           preview: preview,
           receivedAt: BuiltValueNullFieldError.checkNotNull(
-              receivedAt, r'MessageSummary', 'receivedAt'),
+            receivedAt,
+            r'MessageSummary',
+            'receivedAt',
+          ),
           expiresAt: expiresAt,
           read: BuiltValueNullFieldError.checkNotNull(
-              read, r'MessageSummary', 'read'),
+            read,
+            r'MessageSummary',
+            'read',
+          ),
           starred: BuiltValueNullFieldError.checkNotNull(
-              starred, r'MessageSummary', 'starred'),
+            starred,
+            r'MessageSummary',
+            'starred',
+          ),
           sizeBytes: BuiltValueNullFieldError.checkNotNull(
-              sizeBytes, r'MessageSummary', 'sizeBytes'),
+            sizeBytes,
+            r'MessageSummary',
+            'sizeBytes',
+          ),
           attachmentCount: BuiltValueNullFieldError.checkNotNull(
-              attachmentCount, r'MessageSummary', 'attachmentCount'),
+            attachmentCount,
+            r'MessageSummary',
+            'attachmentCount',
+          ),
         );
     replace(_$result);
     return _$result;

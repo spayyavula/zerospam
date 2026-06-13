@@ -37,8 +37,9 @@ class _$AuthMe extends AuthMe {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'AuthMe')..add('user', user))
-        .toString();
+    return (newBuiltValueToStringHelper(
+      r'AuthMe',
+    )..add('user', user)).toString();
   }
 }
 
@@ -78,10 +79,7 @@ class AuthMeBuilder implements Builder<AuthMe, AuthMeBuilder> {
   _$AuthMe _build() {
     _$AuthMe _$result;
     try {
-      _$result = _$v ??
-          _$AuthMe._(
-            user: user.build(),
-          );
+      _$result = _$v ?? _$AuthMe._(user: user.build());
     } catch (_) {
       late String _$failedField;
       try {
@@ -89,7 +87,10 @@ class AuthMeBuilder implements Builder<AuthMe, AuthMeBuilder> {
         user.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AuthMe', _$failedField, e.toString());
+          r'AuthMe',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

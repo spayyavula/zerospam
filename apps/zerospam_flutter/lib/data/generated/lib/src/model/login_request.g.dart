@@ -18,7 +18,7 @@ class _$LoginRequest extends LoginRequest {
       (LoginRequestBuilder()..update(updates))._build();
 
   _$LoginRequest._({required this.email, required this.password, this.totp})
-      : super._();
+    : super._();
   @override
   LoginRequest rebuild(void Function(LoginRequestBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -100,12 +100,19 @@ class LoginRequestBuilder
   LoginRequest build() => _build();
 
   _$LoginRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$LoginRequest._(
           email: BuiltValueNullFieldError.checkNotNull(
-              email, r'LoginRequest', 'email'),
+            email,
+            r'LoginRequest',
+            'email',
+          ),
           password: BuiltValueNullFieldError.checkNotNull(
-              password, r'LoginRequest', 'password'),
+            password,
+            r'LoginRequest',
+            'password',
+          ),
           totp: totp,
         );
     replace(_$result);

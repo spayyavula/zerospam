@@ -89,11 +89,7 @@ class LoginResponseBuilder
   LoginResponse build() => _build();
 
   _$LoginResponse _build() {
-    final _$result = _$v ??
-        _$LoginResponse._(
-          ok: ok,
-          needsTotp: needsTotp,
-        );
+    final _$result = _$v ?? _$LoginResponse._(ok: ok, needsTotp: needsTotp);
     replace(_$result);
     return _$result;
   }

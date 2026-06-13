@@ -37,8 +37,9 @@ class _$ErrorResponse extends ErrorResponse {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'ErrorResponse')..add('error', error))
-        .toString();
+    return (newBuiltValueToStringHelper(
+      r'ErrorResponse',
+    )..add('error', error)).toString();
   }
 }
 
@@ -77,10 +78,14 @@ class ErrorResponseBuilder
   ErrorResponse build() => _build();
 
   _$ErrorResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$ErrorResponse._(
           error: BuiltValueNullFieldError.checkNotNull(
-              error, r'ErrorResponse', 'error'),
+            error,
+            r'ErrorResponse',
+            'error',
+          ),
         );
     replace(_$result);
     return _$result;

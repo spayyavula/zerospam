@@ -7,17 +7,18 @@ part of 'device_register_request.dart';
 // **************************************************************************
 
 const DeviceRegisterRequestPlatformEnum
-    _$deviceRegisterRequestPlatformEnum_ios =
+_$deviceRegisterRequestPlatformEnum_ios =
     const DeviceRegisterRequestPlatformEnum._('ios');
 const DeviceRegisterRequestPlatformEnum
-    _$deviceRegisterRequestPlatformEnum_android =
+_$deviceRegisterRequestPlatformEnum_android =
     const DeviceRegisterRequestPlatformEnum._('android');
 const DeviceRegisterRequestPlatformEnum
-    _$deviceRegisterRequestPlatformEnum_web =
+_$deviceRegisterRequestPlatformEnum_web =
     const DeviceRegisterRequestPlatformEnum._('web');
 
 DeviceRegisterRequestPlatformEnum _$deviceRegisterRequestPlatformEnumValueOf(
-    String name) {
+  String name,
+) {
   switch (name) {
     case 'ios':
       return _$deviceRegisterRequestPlatformEnum_ios;
@@ -31,15 +32,17 @@ DeviceRegisterRequestPlatformEnum _$deviceRegisterRequestPlatformEnumValueOf(
 }
 
 final BuiltSet<DeviceRegisterRequestPlatformEnum>
-    _$deviceRegisterRequestPlatformEnumValues = BuiltSet<
-        DeviceRegisterRequestPlatformEnum>(const <DeviceRegisterRequestPlatformEnum>[
-  _$deviceRegisterRequestPlatformEnum_ios,
-  _$deviceRegisterRequestPlatformEnum_android,
-  _$deviceRegisterRequestPlatformEnum_web,
-]);
+_$deviceRegisterRequestPlatformEnumValues =
+    BuiltSet<DeviceRegisterRequestPlatformEnum>(
+      const <DeviceRegisterRequestPlatformEnum>[
+        _$deviceRegisterRequestPlatformEnum_ios,
+        _$deviceRegisterRequestPlatformEnum_android,
+        _$deviceRegisterRequestPlatformEnum_web,
+      ],
+    );
 
 Serializer<DeviceRegisterRequestPlatformEnum>
-    _$deviceRegisterRequestPlatformEnumSerializer =
+_$deviceRegisterRequestPlatformEnumSerializer =
     _$DeviceRegisterRequestPlatformEnumSerializer();
 
 class _$DeviceRegisterRequestPlatformEnumSerializer
@@ -62,16 +65,19 @@ class _$DeviceRegisterRequestPlatformEnumSerializer
 
   @override
   Object serialize(
-          Serializers serializers, DeviceRegisterRequestPlatformEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+    Serializers serializers,
+    DeviceRegisterRequestPlatformEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   DeviceRegisterRequestPlatformEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      DeviceRegisterRequestPlatformEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => DeviceRegisterRequestPlatformEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$DeviceRegisterRequest extends DeviceRegisterRequest {
@@ -82,17 +88,19 @@ class _$DeviceRegisterRequest extends DeviceRegisterRequest {
   @override
   final String? appVersion;
 
-  factory _$DeviceRegisterRequest(
-          [void Function(DeviceRegisterRequestBuilder)? updates]) =>
-      (DeviceRegisterRequestBuilder()..update(updates))._build();
+  factory _$DeviceRegisterRequest([
+    void Function(DeviceRegisterRequestBuilder)? updates,
+  ]) => (DeviceRegisterRequestBuilder()..update(updates))._build();
 
-  _$DeviceRegisterRequest._(
-      {required this.name, this.platform, this.appVersion})
-      : super._();
+  _$DeviceRegisterRequest._({
+    required this.name,
+    this.platform,
+    this.appVersion,
+  }) : super._();
   @override
   DeviceRegisterRequest rebuild(
-          void Function(DeviceRegisterRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(DeviceRegisterRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   DeviceRegisterRequestBuilder toBuilder() =>
@@ -173,10 +181,14 @@ class DeviceRegisterRequestBuilder
   DeviceRegisterRequest build() => _build();
 
   _$DeviceRegisterRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$DeviceRegisterRequest._(
           name: BuiltValueNullFieldError.checkNotNull(
-              name, r'DeviceRegisterRequest', 'name'),
+            name,
+            r'DeviceRegisterRequest',
+            'name',
+          ),
           platform: platform,
           appVersion: appVersion,
         );

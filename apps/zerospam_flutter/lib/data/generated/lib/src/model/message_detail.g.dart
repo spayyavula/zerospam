@@ -32,11 +32,11 @@ MessageDetailFolderEnum _$messageDetailFolderEnumValueOf(String name) {
 
 final BuiltSet<MessageDetailFolderEnum> _$messageDetailFolderEnumValues =
     BuiltSet<MessageDetailFolderEnum>(const <MessageDetailFolderEnum>[
-  _$messageDetailFolderEnum_inbox,
-  _$messageDetailFolderEnum_quarantine,
-  _$messageDetailFolderEnum_sent,
-  _$messageDetailFolderEnum_trash,
-]);
+      _$messageDetailFolderEnum_inbox,
+      _$messageDetailFolderEnum_quarantine,
+      _$messageDetailFolderEnum_sent,
+      _$messageDetailFolderEnum_trash,
+    ]);
 
 Serializer<MessageDetailFolderEnum> _$messageDetailFolderEnumSerializer =
     _$MessageDetailFolderEnumSerializer();
@@ -62,16 +62,20 @@ class _$MessageDetailFolderEnumSerializer
   final String wireName = 'MessageDetailFolderEnum';
 
   @override
-  Object serialize(Serializers serializers, MessageDetailFolderEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    MessageDetailFolderEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   MessageDetailFolderEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      MessageDetailFolderEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => MessageDetailFolderEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$MessageDetail extends MessageDetail {
@@ -113,25 +117,25 @@ class _$MessageDetail extends MessageDetail {
   factory _$MessageDetail([void Function(MessageDetailBuilder)? updates]) =>
       (MessageDetailBuilder()..update(updates))._build();
 
-  _$MessageDetail._(
-      {required this.id,
-      required this.mailboxId,
-      required this.folder,
-      required this.fromAddress,
-      this.fromName,
-      required this.toAddresses,
-      this.subject,
-      this.preview,
-      required this.receivedAt,
-      this.expiresAt,
-      required this.read,
-      required this.starred,
-      required this.sizeBytes,
-      required this.attachmentCount,
-      this.bodyText,
-      this.bodyHtml,
-      this.ccAddresses})
-      : super._();
+  _$MessageDetail._({
+    required this.id,
+    required this.mailboxId,
+    required this.folder,
+    required this.fromAddress,
+    this.fromName,
+    required this.toAddresses,
+    this.subject,
+    this.preview,
+    required this.receivedAt,
+    this.expiresAt,
+    required this.read,
+    required this.starred,
+    required this.sizeBytes,
+    required this.attachmentCount,
+    this.bodyText,
+    this.bodyHtml,
+    this.ccAddresses,
+  }) : super._();
   @override
   MessageDetail rebuild(void Function(MessageDetailBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -326,31 +330,59 @@ class MessageDetailBuilder
   MessageDetail build() => _build();
 
   _$MessageDetail _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$MessageDetail._(
           id: BuiltValueNullFieldError.checkNotNull(id, r'MessageDetail', 'id'),
           mailboxId: BuiltValueNullFieldError.checkNotNull(
-              mailboxId, r'MessageDetail', 'mailboxId'),
+            mailboxId,
+            r'MessageDetail',
+            'mailboxId',
+          ),
           folder: BuiltValueNullFieldError.checkNotNull(
-              folder, r'MessageDetail', 'folder'),
+            folder,
+            r'MessageDetail',
+            'folder',
+          ),
           fromAddress: BuiltValueNullFieldError.checkNotNull(
-              fromAddress, r'MessageDetail', 'fromAddress'),
+            fromAddress,
+            r'MessageDetail',
+            'fromAddress',
+          ),
           fromName: fromName,
           toAddresses: BuiltValueNullFieldError.checkNotNull(
-              toAddresses, r'MessageDetail', 'toAddresses'),
+            toAddresses,
+            r'MessageDetail',
+            'toAddresses',
+          ),
           subject: subject,
           preview: preview,
           receivedAt: BuiltValueNullFieldError.checkNotNull(
-              receivedAt, r'MessageDetail', 'receivedAt'),
+            receivedAt,
+            r'MessageDetail',
+            'receivedAt',
+          ),
           expiresAt: expiresAt,
           read: BuiltValueNullFieldError.checkNotNull(
-              read, r'MessageDetail', 'read'),
+            read,
+            r'MessageDetail',
+            'read',
+          ),
           starred: BuiltValueNullFieldError.checkNotNull(
-              starred, r'MessageDetail', 'starred'),
+            starred,
+            r'MessageDetail',
+            'starred',
+          ),
           sizeBytes: BuiltValueNullFieldError.checkNotNull(
-              sizeBytes, r'MessageDetail', 'sizeBytes'),
+            sizeBytes,
+            r'MessageDetail',
+            'sizeBytes',
+          ),
           attachmentCount: BuiltValueNullFieldError.checkNotNull(
-              attachmentCount, r'MessageDetail', 'attachmentCount'),
+            attachmentCount,
+            r'MessageDetail',
+            'attachmentCount',
+          ),
           bodyText: bodyText,
           bodyHtml: bodyHtml,
           ccAddresses: ccAddresses,

@@ -23,14 +23,14 @@ class _$Mailbox extends Mailbox {
   factory _$Mailbox([void Function(MailboxBuilder)? updates]) =>
       (MailboxBuilder()..update(updates))._build();
 
-  _$Mailbox._(
-      {required this.id,
-      required this.address,
-      required this.domainId,
-      this.displayName,
-      required this.quarantineTtlHours,
-      required this.createdAt})
-      : super._();
+  _$Mailbox._({
+    required this.id,
+    required this.address,
+    required this.domainId,
+    this.displayName,
+    required this.quarantineTtlHours,
+    required this.createdAt,
+  }) : super._();
   @override
   Mailbox rebuild(void Function(MailboxBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -136,18 +136,31 @@ class MailboxBuilder implements Builder<Mailbox, MailboxBuilder> {
   Mailbox build() => _build();
 
   _$Mailbox _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$Mailbox._(
           id: BuiltValueNullFieldError.checkNotNull(id, r'Mailbox', 'id'),
           address: BuiltValueNullFieldError.checkNotNull(
-              address, r'Mailbox', 'address'),
+            address,
+            r'Mailbox',
+            'address',
+          ),
           domainId: BuiltValueNullFieldError.checkNotNull(
-              domainId, r'Mailbox', 'domainId'),
+            domainId,
+            r'Mailbox',
+            'domainId',
+          ),
           displayName: displayName,
           quarantineTtlHours: BuiltValueNullFieldError.checkNotNull(
-              quarantineTtlHours, r'Mailbox', 'quarantineTtlHours'),
+            quarantineTtlHours,
+            r'Mailbox',
+            'quarantineTtlHours',
+          ),
           createdAt: BuiltValueNullFieldError.checkNotNull(
-              createdAt, r'Mailbox', 'createdAt'),
+            createdAt,
+            r'Mailbox',
+            'createdAt',
+          ),
         );
     replace(_$result);
     return _$result;

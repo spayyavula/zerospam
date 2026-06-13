@@ -10,15 +10,15 @@ class _$DeviceRegisterResponse extends DeviceRegisterResponse {
   @override
   final String token;
 
-  factory _$DeviceRegisterResponse(
-          [void Function(DeviceRegisterResponseBuilder)? updates]) =>
-      (DeviceRegisterResponseBuilder()..update(updates))._build();
+  factory _$DeviceRegisterResponse([
+    void Function(DeviceRegisterResponseBuilder)? updates,
+  ]) => (DeviceRegisterResponseBuilder()..update(updates))._build();
 
   _$DeviceRegisterResponse._({required this.token}) : super._();
   @override
   DeviceRegisterResponse rebuild(
-          void Function(DeviceRegisterResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(DeviceRegisterResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   DeviceRegisterResponseBuilder toBuilder() =>
@@ -40,9 +40,9 @@ class _$DeviceRegisterResponse extends DeviceRegisterResponse {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'DeviceRegisterResponse')
-          ..add('token', token))
-        .toString();
+    return (newBuiltValueToStringHelper(
+      r'DeviceRegisterResponse',
+    )..add('token', token)).toString();
   }
 }
 
@@ -81,10 +81,14 @@ class DeviceRegisterResponseBuilder
   DeviceRegisterResponse build() => _build();
 
   _$DeviceRegisterResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$DeviceRegisterResponse._(
           token: BuiltValueNullFieldError.checkNotNull(
-              token, r'DeviceRegisterResponse', 'token'),
+            token,
+            r'DeviceRegisterResponse',
+            'token',
+          ),
         );
     replace(_$result);
     return _$result;

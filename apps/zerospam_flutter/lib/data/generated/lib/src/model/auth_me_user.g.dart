@@ -19,12 +19,12 @@ class _$AuthMeUser extends AuthMeUser {
   factory _$AuthMeUser([void Function(AuthMeUserBuilder)? updates]) =>
       (AuthMeUserBuilder()..update(updates))._build();
 
-  _$AuthMeUser._(
-      {required this.id,
-      required this.email,
-      required this.totpEnabled,
-      this.tourCompletedAt})
-      : super._();
+  _$AuthMeUser._({
+    required this.id,
+    required this.email,
+    required this.totpEnabled,
+    this.tourCompletedAt,
+  }) : super._();
   @override
   AuthMeUser rebuild(void Function(AuthMeUserBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -114,13 +114,20 @@ class AuthMeUserBuilder implements Builder<AuthMeUser, AuthMeUserBuilder> {
   AuthMeUser build() => _build();
 
   _$AuthMeUser _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AuthMeUser._(
           id: BuiltValueNullFieldError.checkNotNull(id, r'AuthMeUser', 'id'),
           email: BuiltValueNullFieldError.checkNotNull(
-              email, r'AuthMeUser', 'email'),
+            email,
+            r'AuthMeUser',
+            'email',
+          ),
           totpEnabled: BuiltValueNullFieldError.checkNotNull(
-              totpEnabled, r'AuthMeUser', 'totpEnabled'),
+            totpEnabled,
+            r'AuthMeUser',
+            'totpEnabled',
+          ),
           tourCompletedAt: tourCompletedAt,
         );
     replace(_$result);
