@@ -25,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authNotifierProvider);
     final needsTotp = auth.asData?.value.status == AuthStatus.needsTotp;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('ZeroSpam — Sign in')),
@@ -57,18 +58,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             if (auth.hasError)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text('${auth.error}', key: const Key('error'),
-                    style: const TextStyle(color: Colors.red)),
+                child: Text(
+                  '${auth.error}',
+                  key: const Key('error'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
               ),
             FilledButton(
               key: const Key('submit'),
               onPressed: auth.isLoading
                   ? null
-                  : () => ref.read(authNotifierProvider.notifier).signIn(
-                        _email.text.trim(),
-                        _password.text,
-                        totp: needsTotp ? _totp.text.trim() : null,
-                      ),
+                  : () => ref
+                        .read(authNotifierProvider.notifier)
+                        .signIn(
+                          _email.text.trim(),
+                          _password.text,
+                          totp: needsTotp ? _totp.text.trim() : null,
+                        ),
               child: const Text('Sign in'),
             ),
           ],

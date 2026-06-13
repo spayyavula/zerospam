@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/auth/application/auth_notifier.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/inbox/presentation/inbox_list_screen.dart';
+import 'theme/app_theme.dart';
 
 class ZeroSpamApp extends ConsumerWidget {
   const ZeroSpamApp({super.key});
@@ -12,7 +13,9 @@ class ZeroSpamApp extends ConsumerWidget {
     final auth = ref.watch(authNotifierProvider);
     return MaterialApp(
       title: 'ZeroSpam',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      theme: lightTheme(),
+      darkTheme: darkTheme(),
+      themeMode: ThemeMode.system,
       home: switch (auth.asData?.value.status) {
         AuthStatus.signedIn => const InboxListScreen(),
         _ => const LoginScreen(),

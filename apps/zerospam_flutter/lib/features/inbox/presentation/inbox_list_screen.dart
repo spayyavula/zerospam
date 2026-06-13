@@ -9,11 +9,13 @@ class InboxListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final inbox = ref.watch(inboxNotifierProvider);
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Inbox')),
       body: inbox.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e', key: const Key('inbox-error'))),
+        error: (e, _) =>
+            Center(child: Text('$e', key: const Key('inbox-error'))),
         data: (messages) => RefreshIndicator(
           onRefresh: () => ref.read(inboxNotifierProvider.notifier).refresh(),
           child: messages.isEmpty
@@ -25,15 +27,27 @@ class InboxListScreen extends ConsumerWidget {
                     final m = messages[i];
                     return ListTile(
                       leading: m.read == 0
-                          ? const Icon(Icons.circle, size: 10, color: Colors.blue)
+                          ? Icon(
+                              Icons.circle,
+                              size: 10,
+                              color: colorScheme.primary,
+                            )
                           : const SizedBox(width: 10),
-                      title: Text(m.subject ?? '(no subject)',
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(m.fromName ?? m.fromAddress,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => MessageDetailScreen(messageId: m.id),
-                      )),
+                      title: Text(
+                        m.subject ?? '(no subject)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        m.fromName ?? m.fromAddress,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MessageDetailScreen(messageId: m.id),
+                        ),
+                      ),
                     );
                   },
                 ),
