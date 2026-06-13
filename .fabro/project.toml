@@ -5,18 +5,35 @@ _version = 1
 enabled = true
 draft = false
 
-# Default sandbox environment for runs in this repo.
+# Default sandbox environment: LOCAL Docker (no cloud). The local `docker`
+# provider runs PREBUILT images only, so build the toolchain image once before
+# the first run (~1.2GB; Node 22 + Flutter stable + Dart + JDK 17):
+#   docker build -t zerospam-mobile:local -f .fabro/Dockerfile .fabro
 [run.environment]
-id = "zerospam-mobile"
+id = "zerospam-mobile-local"
 
+[environments.zerospam-mobile-local]
+provider = "docker"
+
+[environments.zerospam-mobile-local.image]
+docker = "zerospam-mobile:local"
+
+[environments.zerospam-mobile-local.resources]
+cpu = 4
+memory = "8GB"
+
+[environments.zerospam-mobile-local.network]
+mode = "allow_all"
+
+# Alternative: Daytona cloud sandbox, which builds .fabro/Dockerfile into a
+# snapshot directly (no pre-build). To use it, set the id above to
+# "zerospam-mobile" and configure a key: `fabro secret set DAYTONA_API_KEY ...`.
 [environments.zerospam-mobile]
 provider = "daytona"
 
-# Built from the Dockerfile next to this file (Node + Flutter/Dart + JDK + gh).
 [environments.zerospam-mobile.image]
 dockerfile = { path = "Dockerfile" }
 
-# Flutter + a Node monorepo install want headroom; bump if Android tooling is added.
 [environments.zerospam-mobile.resources]
 cpu = 8
 memory = "16GB"
