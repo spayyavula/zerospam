@@ -43,6 +43,8 @@ dependencies:
   # comes from the generated pubspec; imported as `package:openapi/openapi.dart`.
   openapi:
     path: lib/data/generated
+  cookie_jar: ^4.0.9
+  dio_cookie_manager: ^3.4.0
 
 dev_dependencies:
   flutter_test:
