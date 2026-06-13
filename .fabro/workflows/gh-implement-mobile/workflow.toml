@@ -2,5 +2,6 @@ _version = 1
 
 # The plan step reads the issue; the run publishes a pull request with the result.
 [run.integrations.github.permissions]
+contents = "write"
 issues = "read"
 pull_requests = "write"
