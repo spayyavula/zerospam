@@ -1,0 +1,36 @@
+# Signing credentials are managed in the Codemagic UI, not committed here.
+# Configure the `android_signing` and `ios_signing` environment groups there,
+# along with the required Google Play and Apple Developer credentials.
+
+workflows:
+  android-workflow:
+    name: ZeroSpam Android
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      groups:
+        - android_signing
+    scripts:
+      - cd apps/zerospam_flutter && flutter pub get
+      - cd apps/zerospam_flutter && flutter analyze
+      - cd apps/zerospam_flutter && flutter test
+      - cd apps/zerospam_flutter && flutter build appbundle --release
+      - cd apps/zerospam_flutter && flutter build apk --release
+    artifacts:
+      - apps/zerospam_flutter/build/**/outputs/**/*.aab
+      - apps/zerospam_flutter/build/**/outputs/**/*.apk
+
+  ios-workflow:
+    name: ZeroSpam iOS
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      groups:
+        - ios_signing
+    scripts:
+      - cd apps/zerospam_flutter && flutter pub get
+      - cd apps/zerospam_flutter && flutter analyze
+      - cd apps/zerospam_flutter && flutter test
+      - cd apps/zerospam_flutter && flutter build ipa --release || flutter build ios --release --no-codesign
+    artifacts:
+      - apps/zerospam_flutter/build/ios/ipa/*.ipa
