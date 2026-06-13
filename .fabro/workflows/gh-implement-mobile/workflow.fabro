@@ -2,7 +2,7 @@ digraph GhImplementMobile {
     graph [
         goal="Implement a GitHub issue for the ZeroSpam mobile slice",
         model_stylesheet="
-            * { model: claude-opus-4-7; }
+            * { model: gpt-5.5; }
         "
     ]
     rankdir=LR

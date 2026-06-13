@@ -48,9 +48,10 @@ the repo:
    ```
 2. In the wizard, connect the **GitHub integration** and authorize this repo
    (`spayyavula/zerospam`) so the `gh-*` workflows can read issues and open PRs.
-3. Configure a **Daytona** provider (the sandbox `provider` in `project.toml`) and
-   set the model API keys referenced by the `model_stylesheet` (`claude-opus-4-7`;
-   change it to whatever your Fabro instance has configured).
+3. Configure a sandbox provider and at least one LLM provider key. The workflows
+   route to **OpenAI** (`gpt-5.5` for heavy steps, `gpt-5.4-mini` for `Simplify`/
+   `Fixup`); change the `model_stylesheet` / node `model=` attributes if your
+   Fabro instance is configured with different providers/models.
 
 ## Run
 
@@ -62,7 +63,7 @@ fabro run .fabro/workflows/gh-implement-mobile/workflow.fabro --goal 123
 fabro run .fabro/workflows/mobile-slice/workflow.fabro --goal docs/plans/<plan>.md
 ```
 
-> Models in each `workflow.fabro` `model_stylesheet` are placeholders matching
-> Fabro's own examples. Edit them (one CSS-like line) to route nodes to whatever
-> providers/models your Fabro instance has — e.g. a cheap model for `Fixup`, a
-> frontier model for `Implement`.
+> Model routing lives in each `workflow.fabro`: the `model_stylesheet` sets the
+> default (`gpt-5.5`) and individual nodes override with `model=` (e.g. `Fixup`
+> and `Simplify` use the cheaper `gpt-5.4-mini`). Edit those to route nodes to
+> whatever providers/models your Fabro instance has.
