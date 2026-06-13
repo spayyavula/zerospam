@@ -88,11 +88,17 @@ const authMe = {
   required: ['user'],
 } as const;
 
+// The runtime returns exactly one of `{ ok: true }` or `{ needs_totp: true }`.
+// Modeled as a single object with both fields optional rather than `oneOf`:
+// the dart-dio/built_value generator cannot introspect `oneOf` polymorphism
+// (it emits an unresolvable `OneOf` field and breaks serializer generation),
+// and a flat optional-field object deserializes both runtime shapes cleanly.
 const loginResponse = {
-  oneOf: [
-    { type: 'object', properties: { ok: { type: 'boolean', enum: [true] } }, required: ['ok'] },
-    { type: 'object', properties: { needs_totp: { type: 'boolean', enum: [true] } }, required: ['needs_totp'] },
-  ],
+  type: 'object',
+  properties: {
+    ok: { type: 'boolean' },
+    needs_totp: { type: 'boolean' },
+  },
 } as const;
 
 const deviceRegisterResponse = {
