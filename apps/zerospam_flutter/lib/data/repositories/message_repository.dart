@@ -7,8 +7,15 @@ class MessageRepository {
   final api.MobileApi _api;
 
   Future<List<api.MessageSummary>> listInbox(int mailboxId) async {
+    return listMessages(mailboxId: mailboxId, folder: 'inbox');
+  }
+
+  Future<List<api.MessageSummary>> listMessages({
+    required int mailboxId,
+    required String folder,
+  }) async {
     try {
-      final res = await _api.listMessages(mailboxId: mailboxId, folder: 'inbox');
+      final res = await _api.listMessages(mailboxId: mailboxId, folder: folder);
       return res.data?.toList() ?? <api.MessageSummary>[];
     } on DioException catch (e) {
       throw AppError.fromDio(e);

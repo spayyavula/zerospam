@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:openapi/openapi.dart' as api;
 
@@ -8,33 +9,47 @@ import '../../message/presentation/message_detail_screen.dart';
 import '../application/inbox_notifier.dart';
 
 class InboxListScreen extends ConsumerWidget {
-  const InboxListScreen({super.key});
+  const InboxListScreen({super.key, this.folder = 'inbox'});
+
+  final String folder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inbox = ref.watch(inboxNotifierProvider);
+    final messagesState = ref.watch(inboxNotifierProvider(folder));
     final colorScheme = Theme.of(context).colorScheme;
+    final title = _folderTitle(folder);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inbox'),
+        title: Text(title),
         actions: [
           IconButton(
-            tooltip: 'Refresh inbox',
-            onPressed: () => ref.read(inboxNotifierProvider.notifier).refresh(),
+            tooltip: 'Refresh $title',
+            onPressed: () => ref.invalidate(inboxNotifierProvider(folder)),
             icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () {
+              final router = GoRouter.maybeOf(context);
+              if (router != null) {
+                context.push('/settings');
+              }
+            },
+            icon: const Icon(Icons.settings_outlined),
           ),
         ],
       ),
-      body: inbox.when(
+      body: messagesState.when(
         loading: () => const _InboxSkeletonList(),
         error: (e, _) => _InboxErrorState(
+          folderTitle: title,
           message: '$e',
-          onRetry: () => ref.read(inboxNotifierProvider.notifier).refresh(),
+          onRetry: () => ref.invalidate(inboxNotifierProvider(folder)),
         ),
         data: (messages) => RefreshIndicator(
-          onRefresh: () => ref.read(inboxNotifierProvider.notifier).refresh(),
+          onRefresh: () => ref.refresh(inboxNotifierProvider(folder).future),
           child: messages.isEmpty
-              ? const _InboxEmptyState()
+              ? _InboxEmptyState(folderTitle: title)
               : ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
@@ -42,15 +57,24 @@ class InboxListScreen extends ConsumerWidget {
                   itemBuilder: (context, i) => _InboxMessageCard(
                     message: messages[i],
                     colorScheme: colorScheme,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            MessageDetailScreen(messageId: messages[i].id),
-                      ),
-                    ),
+                    onTap: () => _openMessage(context, messages[i].id),
                   ),
                 ),
         ),
+      ),
+    );
+  }
+
+  void _openMessage(BuildContext context, String messageId) {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      context.push('/messages/${Uri.encodeComponent(messageId)}');
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MessageDetailScreen(messageId: messageId),
       ),
     );
   }
@@ -314,7 +338,9 @@ class _SkeletonBox extends StatelessWidget {
 }
 
 class _InboxEmptyState extends StatelessWidget {
-  const _InboxEmptyState();
+  const _InboxEmptyState({required this.folderTitle});
+
+  final String folderTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +359,7 @@ class _InboxEmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Your inbox is clear',
+          'Your ${folderTitle.toLowerCase()} is clear',
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             color: colorScheme.onSurface,
@@ -342,7 +368,7 @@ class _InboxEmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Pull down to check again. We’ll surface only mail that passes your ZeroSpam rules.',
+          'Pull down to check again. ZeroSpam keeps this folder in sync with your mailbox.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: colorScheme.onSurfaceVariant,
@@ -354,8 +380,13 @@ class _InboxEmptyState extends StatelessWidget {
 }
 
 class _InboxErrorState extends StatelessWidget {
-  const _InboxErrorState({required this.message, required this.onRetry});
+  const _InboxErrorState({
+    required this.folderTitle,
+    required this.message,
+    required this.onRetry,
+  });
 
+  final String folderTitle;
   final String message;
   final VoidCallback onRetry;
 
@@ -379,7 +410,7 @@ class _InboxErrorState extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Couldn’t load inbox',
+                'Couldn’t load ${folderTitle.toLowerCase()}',
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: colorScheme.onSurface,
                   fontWeight: FontWeight.w800,
@@ -436,4 +467,14 @@ String _relativeTime(DateTime dateTime) {
 
 String _absoluteTime(DateTime dateTime) {
   return DateFormat.yMMMd().add_jm().format(dateTime);
+}
+
+String _folderTitle(String folder) {
+  return switch (folder) {
+    'inbox' => 'Inbox',
+    'quarantine' => 'Quarantine',
+    'sent' => 'Sent',
+    'trash' => 'Trash',
+    _ => toBeginningOfSentenceCase(folder) ?? folder,
+  };
 }

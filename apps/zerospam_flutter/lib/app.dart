@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/auth/application/auth_notifier.dart';
-import 'features/auth/presentation/login_screen.dart';
-import 'features/inbox/presentation/inbox_list_screen.dart';
+
+import 'app_router.dart';
 import 'theme/app_theme.dart';
 
 class ZeroSpamApp extends ConsumerWidget {
@@ -10,16 +9,13 @@ class ZeroSpamApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authNotifierProvider);
-    return MaterialApp(
+    final router = ref.watch(appRouterProvider);
+    return MaterialApp.router(
       title: 'ZeroSpam',
       theme: lightTheme(),
       darkTheme: darkTheme(),
       themeMode: ThemeMode.system,
-      home: switch (auth.asData?.value.status) {
-        AuthStatus.signedIn => const InboxListScreen(),
-        _ => const LoginScreen(),
-      },
+      routerConfig: router,
     );
   }
 }
