@@ -1,0 +1,39 @@
+_version = 1
+
+# Open a pull request with the work product of each run.
+[run.pull_request]
+enabled = true
+draft = false
+
+# Default sandbox environment for runs in this repo.
+[run.environment]
+id = "zerospam-mobile"
+
+[environments.zerospam-mobile]
+provider = "daytona"
+
+# Built from the Dockerfile next to this file (Node + Flutter/Dart + JDK + gh).
+[environments.zerospam-mobile.image]
+dockerfile = { path = "Dockerfile" }
+
+# Flutter + a Node monorepo install want headroom; bump if Android tooling is added.
+[environments.zerospam-mobile.resources]
+cpu = 8
+memory = "16GB"
+disk = "30GB"
+
+[environments.zerospam-mobile.lifecycle]
+auto_stop = "30m"
+
+[environments.zerospam-mobile.labels]
+repo = "spayyavula/zerospam"
+
+# Keep the Dart client (apps/zerospam_flutter/lib/data/generated) regenerated and
+# formatted whenever an agent edits the OpenAPI document. Uncomment to enable.
+# [[run.hooks]]
+# id = "format-dart"
+# name = "format-dart"
+# event = "post_tool_use"
+# matcher = "write_file|edit_file|apply_patch"
+# script = "cd apps/zerospam_flutter && dart format lib test >/dev/null 2>&1 || true"
+# blocking = false
