@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/device_platform.dart';
 import '../../../core/providers.dart';
 
 enum AuthStatus { signedOut, signedIn, needsTotp }
@@ -22,7 +23,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final auth = ref.read(authRepositoryProvider);
       final loggedIn = await auth.login(email: email, password: password, totp: totp);
       if (!loggedIn) return const AuthState(AuthStatus.needsTotp);
-      final token = await auth.registerDevice(name: 'ZeroSpam Flutter', platform: 'android');
+      final token =
+          await auth.registerDevice(name: 'ZeroSpam Flutter', platform: devicePlatform());
       await ref.read(tokenStoreProvider).write(token);
       return const AuthState(AuthStatus.signedIn);
     });
