@@ -39,6 +39,10 @@ dependencies:
   built_value: ^8.12.6
   built_collection: ^5.1.1
   flutter_secure_storage: ^10.3.1
+  # Generated dart-dio client (openapi-generator output). Package name `openapi`
+  # comes from the generated pubspec; imported as `package:openapi/openapi.dart`.
+  openapi:
+    path: lib/data/generated
 
 dev_dependencies:
   flutter_test:
