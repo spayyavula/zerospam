@@ -14,4 +14,13 @@ class MailboxRepository {
       throw AppError.fromDio(e);
     }
   }
+
+  Future<api.MailboxCounts> counts(int mailboxId) async {
+    try {
+      final res = await _api.getMailboxCounts(id: mailboxId);
+      return res.data!;
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
 }

@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:openapi/openapi.dart' as api;
 
+import '../../../core/providers.dart';
 import '../../../theme/adaptive.dart';
+import '../../inbox/application/inbox_notifier.dart';
 import '../application/message_notifier.dart';
+
+const _moveTargets = ['inbox', 'quarantine', 'trash'];
 
 class MessageDetailScreen extends ConsumerWidget {
   const MessageDetailScreen({super.key, required this.messageId});
@@ -21,19 +25,20 @@ class MessageDetailScreen extends ConsumerWidget {
           message: '$e',
           onRetry: () => ref.invalidate(messageProvider(messageId)),
         ),
-        data: (m) => _MessageDetailBody(message: m),
+        data: (m) => _MessageDetailBody(messageId: messageId, message: m),
       ),
     );
   }
 }
 
-class _MessageDetailBody extends StatelessWidget {
-  const _MessageDetailBody({required this.message});
+class _MessageDetailBody extends ConsumerWidget {
+  const _MessageDetailBody({required this.messageId, required this.message});
 
+  final String messageId;
   final api.MessageDetail message;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -114,16 +119,22 @@ class _MessageDetailBody extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Icon(
-                        message.starred == 1
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: message.starred == 1
-                            ? colorScheme.tertiary
-                            : colorScheme.onSurfaceVariant,
-                        semanticLabel: message.starred == 1
-                            ? 'Starred'
-                            : 'Not starred',
+                      IconButton(
+                        tooltip: message.starred == 1
+                            ? 'Unstar message'
+                            : 'Star message',
+                        onPressed: () => _toggleStar(context, ref),
+                        icon: Icon(
+                          message.starred == 1
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: message.starred == 1
+                              ? colorScheme.tertiary
+                              : colorScheme.onSurfaceVariant,
+                          semanticLabel: message.starred == 1
+                              ? 'Starred'
+                              : 'Not starred',
+                        ),
                       ),
                     ],
                   ),
@@ -153,7 +164,14 @@ class _MessageDetailBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _ActionToolbar(colorScheme: colorScheme),
+          _ActionToolbar(
+            message: message,
+            colorScheme: colorScheme,
+            onToggleRead: () => _toggleRead(context, ref),
+            onToggleStar: () => _toggleStar(context, ref),
+            onMove: () => _showMovePicker(context, ref),
+            onDelete: () => _confirmDelete(context, ref),
+          ),
           const SizedBox(height: 16),
           SelectableText(
             body,
@@ -166,12 +184,154 @@ class _MessageDetailBody extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _toggleRead(BuildContext context, WidgetRef ref) async {
+    final read = message.read == 0;
+    try {
+      await ref.read(messageRepositoryProvider).markRead(messageId, read: read);
+      ref.invalidate(messageProvider(messageId));
+      ref.invalidate(mailboxCountsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(read ? 'Marked as read' : 'Marked as unread')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update read state: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleStar(BuildContext context, WidgetRef ref) async {
+    final starred = message.starred == 0;
+    try {
+      await ref
+          .read(messageRepositoryProvider)
+          .setStarred(messageId, starred: starred);
+      ref.invalidate(messageProvider(messageId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(starred ? 'Starred' : 'Unstarred')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update star: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showMovePicker(BuildContext context, WidgetRef ref) async {
+    final currentFolder = message.folder.name;
+    final targetFolder = await adaptiveDialog<String>(
+      context: context,
+      title: const Text('Move message'),
+      content: const Text('Choose a destination folder.'),
+      actions: _moveTargets
+          .where((target) => target != currentFolder)
+          .map(
+            (target) => TextButton(
+              onPressed: () => Navigator.of(context).pop(target),
+              child: Text(_folderTitle(target)),
+            ),
+          )
+          .toList(),
+    );
+    if (targetFolder == null) return;
+    if (!context.mounted) return;
+    await _moveMessage(context, ref, targetFolder);
+  }
+
+  Future<void> _moveMessage(
+    BuildContext context,
+    WidgetRef ref,
+    String targetFolder,
+  ) async {
+    try {
+      await ref
+          .read(messageRepositoryProvider)
+          .move(messageId, folder: targetFolder);
+      ref.invalidate(messageProvider(messageId));
+      ref.invalidate(inboxNotifierProvider(message.folder.name));
+      ref.invalidate(inboxNotifierProvider(targetFolder));
+      ref.invalidate(mailboxCountsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Moved to ${_folderTitle(targetFolder)}')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not move message: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await adaptiveDialog<bool>(
+      context: context,
+      title: const Text('Delete message?'),
+      content: const Text('This permanently deletes the message.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Delete'),
+        ),
+      ],
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+    await _deleteMessage(context, ref);
+  }
+
+  Future<void> _deleteMessage(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(messageRepositoryProvider).delete(messageId);
+      ref.invalidate(inboxNotifierProvider(message.folder.name));
+      ref.invalidate(mailboxCountsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Message deleted')));
+        await Navigator.of(context).maybePop();
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not delete message: $error')),
+        );
+      }
+    }
+  }
 }
 
 class _ActionToolbar extends StatelessWidget {
-  const _ActionToolbar({required this.colorScheme});
+  const _ActionToolbar({
+    required this.message,
+    required this.colorScheme,
+    required this.onToggleRead,
+    required this.onToggleStar,
+    required this.onMove,
+    required this.onDelete,
+  });
 
+  final api.MessageDetail message;
   final ColorScheme colorScheme;
+  final Future<void> Function() onToggleRead;
+  final Future<void> Function() onToggleStar;
+  final Future<void> Function() onMove;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -186,35 +346,33 @@ class _ActionToolbar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _ActionButton(
-                icon: Icons.mark_email_unread_outlined,
-                label: 'Read',
-                onPressed: () => _showComingSoon(context, 'Read status'),
+                icon: message.read == 0
+                    ? Icons.mark_email_read_outlined
+                    : Icons.mark_email_unread_outlined,
+                label: message.read == 0 ? 'Read' : 'Unread',
+                onPressed: onToggleRead,
               ),
               _ActionButton(
-                icon: Icons.star_border_rounded,
-                label: 'Star',
-                onPressed: () => _showComingSoon(context, 'Star'),
+                icon: message.starred == 1
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                label: message.starred == 1 ? 'Unstar' : 'Star',
+                onPressed: onToggleStar,
               ),
               _ActionButton(
                 icon: Icons.drive_file_move_outline,
                 label: 'Move',
-                onPressed: () => _showComingSoon(context, 'Move'),
+                onPressed: onMove,
               ),
               _ActionButton(
                 icon: Icons.delete_outline,
                 label: 'Delete',
-                onPressed: () => _showComingSoon(context, 'Delete'),
+                onPressed: onDelete,
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$action action is coming in the next phase.')),
     );
   }
 }
@@ -433,4 +591,14 @@ String _initials(String value) {
   if (parts.length == 1) return parts.first.characters.first.toUpperCase();
   return '${parts.first.characters.first}${parts.last.characters.first}'
       .toUpperCase();
+}
+
+String _folderTitle(String folder) {
+  return switch (folder) {
+    'inbox' => 'Inbox',
+    'quarantine' => 'Quarantine',
+    'sent' => 'Sent',
+    'trash' => 'Trash',
+    _ => toBeginningOfSentenceCase(folder) ?? folder,
+  };
 }

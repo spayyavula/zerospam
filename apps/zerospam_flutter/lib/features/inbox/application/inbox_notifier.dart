@@ -14,3 +14,25 @@ final inboxNotifierProvider =
           .read(messageRepositoryProvider)
           .listMessages(mailboxId: mailboxes.first.id, folder: folder);
     });
+
+final searchNotifierProvider =
+    FutureProvider.family<
+      List<api.SearchMessage>,
+      ({String folder, String query})
+    >((ref, params) async {
+      final mailboxes = await ref.read(mailboxRepositoryProvider).list();
+      if (mailboxes.isEmpty) return <api.SearchMessage>[];
+      return ref
+          .read(messageRepositoryProvider)
+          .search(
+            mailboxId: mailboxes.first.id,
+            query: params.query,
+            folder: params.folder,
+          );
+    });
+
+final mailboxCountsProvider = FutureProvider<api.MailboxCounts?>((ref) async {
+  final mailboxes = await ref.read(mailboxRepositoryProvider).list();
+  if (mailboxes.isEmpty) return null;
+  return ref.read(mailboxRepositoryProvider).counts(mailboxes.first.id);
+});

@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openapi/openapi.dart' as api;
 
-class ShellScreen extends StatelessWidget {
+import '../../inbox/application/inbox_notifier.dart';
+
+class ShellScreen extends ConsumerWidget {
   const ShellScreen({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final counts = ref
+        .watch(mailboxCountsProvider)
+        .maybeWhen(data: (counts) => counts, orElse: () => null);
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
@@ -18,29 +25,49 @@ class ShellScreen extends StatelessWidget {
             initialLocation: index == navigationShell.currentIndex,
           );
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.inbox_outlined),
-            selectedIcon: Icon(Icons.inbox_rounded),
+            icon: _badgeIcon(Icons.inbox_outlined, _unread(counts?.inbox)),
+            selectedIcon: _badgeIcon(
+              Icons.inbox_rounded,
+              _unread(counts?.inbox),
+            ),
             label: 'Inbox',
           ),
           NavigationDestination(
-            icon: Icon(Icons.shield_outlined),
-            selectedIcon: Icon(Icons.shield_rounded),
+            icon: _badgeIcon(
+              Icons.shield_outlined,
+              _unread(counts?.quarantine),
+            ),
+            selectedIcon: _badgeIcon(
+              Icons.shield_rounded,
+              _unread(counts?.quarantine),
+            ),
             label: 'Quarantine',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.send_outlined),
             selectedIcon: Icon(Icons.send_rounded),
             label: 'Sent',
           ),
           NavigationDestination(
-            icon: Icon(Icons.delete_outline),
-            selectedIcon: Icon(Icons.delete_rounded),
+            icon: _badgeIcon(Icons.delete_outline, _unread(counts?.trash)),
+            selectedIcon: _badgeIcon(
+              Icons.delete_rounded,
+              _unread(counts?.trash),
+            ),
             label: 'Trash',
           ),
         ],
       ),
     );
+  }
+
+  int _unread(api.MailboxCountsInbox? count) => count?.unread ?? 0;
+
+  Widget _badgeIcon(IconData icon, int unread) {
+    final child = Icon(icon);
+    if (unread <= 0) return child;
+    return Badge(label: Text(unread > 99 ? '99+' : '$unread'), child: child);
   }
 }
