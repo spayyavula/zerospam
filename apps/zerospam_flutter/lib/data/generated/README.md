@@ -48,12 +48,13 @@ import 'package:openapi/openapi.dart';
 
 
 final api = Openapi().getMobileApi();
+final String id = id_example; // String | 
 
 try {
-    final response = await api.getMe();
+    final response = await api.deleteMessage(id);
     print(response);
 } on DioException catch (e) {
-    print("Exception when calling MobileApi->getMe: $e\n");
+    print("Exception when calling MobileApi->deleteMessage: $e\n");
 }
 
 ```
@@ -64,12 +65,18 @@ All URIs are relative to *http://localhost:8025*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*MobileApi*](doc/MobileApi.md) | [**deleteMessage**](doc/MobileApi.md#deletemessage) | **DELETE** /api/messages/{id} | Delete a message
+[*MobileApi*](doc/MobileApi.md) | [**getMailboxCounts**](doc/MobileApi.md#getmailboxcounts) | **GET** /api/mailboxes/{id}/counts | Get per-folder mailbox counts
 [*MobileApi*](doc/MobileApi.md) | [**getMe**](doc/MobileApi.md#getme) | **GET** /api/auth/me | Current user
 [*MobileApi*](doc/MobileApi.md) | [**getMessage**](doc/MobileApi.md#getmessage) | **GET** /api/messages/{id} | Get one message
 [*MobileApi*](doc/MobileApi.md) | [**listMailboxes**](doc/MobileApi.md#listmailboxes) | **GET** /api/mailboxes | List mailboxes
 [*MobileApi*](doc/MobileApi.md) | [**listMessages**](doc/MobileApi.md#listmessages) | **GET** /api/messages | List messages in a folder
 [*MobileApi*](doc/MobileApi.md) | [**login**](doc/MobileApi.md#login) | **POST** /api/auth/login | Log in (sets session cookie)
+[*MobileApi*](doc/MobileApi.md) | [**markRead**](doc/MobileApi.md#markread) | **POST** /api/messages/{id}/read | Set message read state
+[*MobileApi*](doc/MobileApi.md) | [**moveMessage**](doc/MobileApi.md#movemessage) | **POST** /api/messages/{id}/move | Move a message to another folder
 [*MobileApi*](doc/MobileApi.md) | [**registerDevice**](doc/MobileApi.md#registerdevice) | **POST** /api/auth/devices | Register a device, get a bearer token
+[*MobileApi*](doc/MobileApi.md) | [**searchMessages**](doc/MobileApi.md#searchmessages) | **GET** /api/search | Search messages
+[*MobileApi*](doc/MobileApi.md) | [**starMessage**](doc/MobileApi.md#starmessage) | **POST** /api/messages/{id}/star | Set message starred state
 
 
 ## Documentation For Models
@@ -79,11 +86,19 @@ Class | Method | HTTP request | Description
  - [DeviceRegisterRequest](doc/DeviceRegisterRequest.md)
  - [DeviceRegisterResponse](doc/DeviceRegisterResponse.md)
  - [ErrorResponse](doc/ErrorResponse.md)
+ - [FolderCount](doc/FolderCount.md)
  - [LoginRequest](doc/LoginRequest.md)
  - [LoginResponse](doc/LoginResponse.md)
  - [Mailbox](doc/Mailbox.md)
+ - [MailboxCounts](doc/MailboxCounts.md)
+ - [MailboxCountsInbox](doc/MailboxCountsInbox.md)
+ - [MarkReadRequest](doc/MarkReadRequest.md)
  - [MessageDetail](doc/MessageDetail.md)
  - [MessageSummary](doc/MessageSummary.md)
+ - [MoveMessageRequest](doc/MoveMessageRequest.md)
+ - [OkResponse](doc/OkResponse.md)
+ - [SearchMessage](doc/SearchMessage.md)
+ - [StarMessageRequest](doc/StarMessageRequest.md)
 
 
 ## Documentation For Authorization
