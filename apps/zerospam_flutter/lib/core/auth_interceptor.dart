@@ -14,6 +14,14 @@ class AuthInterceptor extends Interceptor {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+    // A bodyless request (e.g. DELETE, GET) must not advertise a JSON body:
+    // servers that parse the body (Fastify) reject an empty body sent with
+    // `application/json` (FST_ERR_CTP_EMPTY_JSON_BODY -> 400), which broke
+    // message deletion. Operations that send a body keep their content-type.
+    if (options.data == null) {
+      options.headers.removeWhere((k, _) => k.toLowerCase() == Headers.contentTypeHeader);
+      options.contentType = null;
+    }
     handler.next(options);
   }
 
