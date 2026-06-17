@@ -116,7 +116,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       secure: config.isProd,
       sameSite: 'lax',
       path: '/',
-      maxAge: 30 * 24 * 60 * 60,
+      // Retain client-side up to the absolute cap; the server enforces the
+      // sliding idle timeout and the hard cap on each request.
+      maxAge: Math.floor(config.sessionAbsoluteTtlMs / 1000),
     });
     recordAudit({ event: 'login.ok', userId: user.id, ip, userAgent: ua });
     return { ok: true };

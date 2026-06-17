@@ -112,6 +112,11 @@ export const config = {
   // so XFF from arbitrary clients can't spoof req.ip (rate-limit / audit source).
   // Override with TRUST_PROXY (e.g. a CIDR, comma list, hop count, or 'true').
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+  // Session lifetimes. Idle is a sliding window refreshed on each authenticated
+  // request; absolute is a hard cap from session creation that activity cannot
+  // extend (ASVS V3.3.2 — periodic re-auth even for active sessions).
+  sessionIdleTtlMs: envInt('SESSION_IDLE_TTL_DAYS', 30) * 24 * 60 * 60 * 1000,
+  sessionAbsoluteTtlMs: envInt('SESSION_ABSOLUTE_TTL_DAYS', 90) * 24 * 60 * 60 * 1000,
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
   rateLimitSignupPerMin: envInt('RATE_LIMIT_SIGNUP_PER_MIN', 5),
   rateLimitAuthPerMin: envInt('RATE_LIMIT_AUTH_PER_MIN', 30),
