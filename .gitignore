@@ -14,3 +14,11 @@ server/data/.digest-secret
 server/data/.connection-secret
 .superpowers/
 .worktrees/
+
+# Secrets / credentials — never commit
+*.pem
+*.key
+*.p12
+*.pfx
+/data/
+**/app.env
