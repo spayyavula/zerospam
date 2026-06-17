@@ -71,6 +71,18 @@ export function parseAllowedOrigins(raw: string | undefined): string[] {
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
+// Coerce TRUST_PROXY into the shape Fastify/proxy-addr accepts.
+// 'true'/'false' → boolean; a bare integer → hop count; anything else
+// (named subnet like 'loopback', a CIDR, or a comma list) → passed through.
+export function parseTrustProxy(raw: string | undefined): boolean | number | string {
+  if (raw === undefined || raw.trim() === '') return 'loopback';
+  const v = raw.trim();
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v;
+}
+
 export const config = {
   smtpPort: envInt('SMTP_PORT', 2525),
   apiPort: envInt('API_PORT', 8025),
@@ -95,6 +107,11 @@ export const config = {
     dataDir: process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : defaultDataDir,
   }),
   allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
+  // Reverse-proxy trust for deriving the real client IP from X-Forwarded-For.
+  // Default 'loopback' trusts only a same-host proxy (Caddy on 127.0.0.1/::1),
+  // so XFF from arbitrary clients can't spoof req.ip (rate-limit / audit source).
+  // Override with TRUST_PROXY (e.g. a CIDR, comma list, hop count, or 'true').
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
   rateLimitSignupPerMin: envInt('RATE_LIMIT_SIGNUP_PER_MIN', 5),
   rateLimitAuthPerMin: envInt('RATE_LIMIT_AUTH_PER_MIN', 30),

@@ -2,7 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import crypto from 'node:crypto';
 import { z } from 'zod';
 import { getOwnerByEmail, getOwnerById, verifyPassword, updateOwnerPassword, setTotpSecret } from '../users.js';
-import { verifyTotp, generateTotpSecret, provisioningUri } from '../totp.js';
+import {
+  verifyStoredTotp,
+  generateTotpSecret,
+  provisioningUri,
+  encryptTotpSecret,
+  isEncryptedTotpSecret,
+} from '../totp.js';
 import { createSession, destroySession, SESSION_COOKIE_NAME } from '../sessions.js';
 import { config } from '../config.js';
 import { recordAudit } from '../audit.js';
@@ -57,7 +63,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     const { email, password, totp } = parsed.data;
     const user = getOwnerByEmail(email);
-    const ip = (req.ip || req.headers['x-forwarded-for']) as string | undefined;
+    // req.ip is derived from X-Forwarded-For only when behind the trusted proxy
+    // (config.trustProxy); never read the raw header, which clients can spoof.
+    const ip = req.ip as string | undefined;
     const ua = (req.headers['user-agent'] as string | undefined) ?? null;
 
     if (!user) {
@@ -88,10 +96,17 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       if (!totp) {
         return { needs_totp: true };
       }
-      if (!user.totp_secret || !verifyTotp(user.totp_secret, totp)) {
+      if (!user.totp_secret || !verifyStoredTotp(user.totp_secret, totp)) {
         recordAudit({ event: 'totp.fail', userId: user.id, ip, userAgent: ua });
         reply.code(401).send({ error: 'invalid-credentials' });
         return;
+      }
+      // Lazily migrate a legacy plaintext seed to encrypted-at-rest on first good verify.
+      if (!isEncryptedTotpSecret(user.totp_secret)) {
+        db.prepare('UPDATE users SET totp_secret = ? WHERE id = ?').run(
+          encryptTotpSecret(user.totp_secret),
+          user.id,
+        );
       }
     }
 
@@ -175,8 +190,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const u = getOwnerById(userId);
     if (!u) { reply.code(401).send({ error: 'unauthorized' }); return; }
     const secret = generateTotpSecret();
-    // Store as candidate — totp_enabled_at stays null until /confirm
-    db.prepare('UPDATE users SET totp_secret = ?, totp_enabled_at = NULL WHERE id = ?').run(secret, userId);
+    // Store the candidate seed encrypted-at-rest — totp_enabled_at stays null
+    // until /confirm. The plaintext secret is returned once, here, for enrollment.
+    db.prepare('UPDATE users SET totp_secret = ?, totp_enabled_at = NULL WHERE id = ?').run(
+      encryptTotpSecret(secret),
+      userId,
+    );
     return { secret, otpauth_url: provisioningUri(u.email, secret) };
   });
 
@@ -190,7 +209,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) { reply.code(400).send({ error: 'invalid-body' }); return; }
     const u = getOwnerById(userId);
     if (!u || !u.totp_secret) { reply.code(400).send({ error: 'no-pending-totp' }); return; }
-    if (!verifyTotp(u.totp_secret, parsed.data.code)) {
+    if (!verifyStoredTotp(u.totp_secret, parsed.data.code)) {
       recordAudit({ event: 'totp.fail', userId, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
       reply.code(401).send({ error: 'invalid-code' });
       return;
