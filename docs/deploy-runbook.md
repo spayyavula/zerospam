@@ -38,8 +38,15 @@ aws ssm put-parameter --type SecureString --name /zerospam/prod/RELAY_PASS --val
 ```
 Plus the non-secret vars from `server/.env.production.example` (NODE_ENV, API_PORT,
 SMTP_PORT, DATA_DIR, WEB_DIST_PATH, PUBLIC_BASE_URL, ALLOWED_ORIGINS, SIGNUP_DOMAIN,
-SEND_MODE, RELAY_HOST, RELAY_PORT, RELAY_SECURE, TLS_CERT_PATH, TLS_KEY_PATH) as
-`String` parameters under the same `/zerospam/prod/` prefix.
+TRUST_PROXY, SEND_MODE, RELAY_HOST, RELAY_PORT, RELAY_SECURE, TLS_CERT_PATH,
+TLS_KEY_PATH) as `String` parameters under the same `/zerospam/prod/` prefix.
+`entrypoint.sh` renders every parameter under the prefix, so adding one is enough.
+
+> **Required:** set `TRUST_PROXY=1`. The app sits behind Caddy on the docker
+> network, so without it `req.ip` resolves to Caddy's container IP and the
+> rate-limiter buckets all clients together (and audit logs lose the real IP).
+> `SESSION_IDLE_TTL_DAYS` (30) and `SESSION_ABSOLUTE_TTL_DAYS` (90) are optional
+> overrides for the session idle window and absolute cap.
 
 ## Phase 4 — Deploy
 - On first boot cloud-init cloned the repo, set up Docker, mounted `/data`, and tried
