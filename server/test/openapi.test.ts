@@ -32,7 +32,11 @@ describe('OpenAPI document', () => {
       }
     }
     expect(ids.sort()).toEqual(
-      ['getMe', 'getMessage', 'listMailboxes', 'listMessages', 'login', 'registerDevice'].sort(),
+      [
+        'deleteMessage', 'getMailboxCounts', 'getMe', 'getMessage', 'listMailboxes',
+        'listMessages', 'login', 'markRead', 'moveMessage', 'registerDevice',
+        'searchMessages', 'starMessage',
+      ].sort(),
     );
   });
 });

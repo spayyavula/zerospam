@@ -31,7 +31,7 @@ import DomainExpandToast from './components/DomainExpandToast';
 import WelcomeTour from './components/WelcomeTour';
 import Landing from './components/Landing';
 import { useShortcuts } from './hooks/useShortcuts';
-import { Shield, Settings, HelpCircle } from 'lucide-react';
+import { Settings, HelpCircle } from 'lucide-react';
 
 type ComposeState = {
   open: boolean;
@@ -363,9 +363,9 @@ export default function App() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <header className="h-12 px-4 border-b border-zsborder flex items-center gap-3 bg-zspanel">
-        <Shield className="w-5 h-5 text-zsaccent" />
+    <div className="h-full flex flex-col bg-paper text-ink">
+      <header className="h-12 px-4 border-b border-rule flex items-center gap-3 bg-paper">
+        <img src="/shield-blue.svg" alt="ZeroSpam shield" className="w-5 h-5" />
         <div className="font-semibold tracking-tight">ZeroSpam</div>
         <div className="text-zsmuted text-sm hidden sm:block">whitelist-first mail</div>
         <div className="flex-1" />
@@ -415,35 +415,35 @@ export default function App() {
         </button>
       </header>
 
-      <div className="flex-1 flex min-h-0">
-        <Sidebar
-          counts={counts}
-          folder={folder}
-          onFolder={(f) => {
-            setFolder(f);
-            setSelectedId(null);
-            setSelectedIds(new Set());
-            setSearchQuery('');
-            setSearchResults(null);
-            setFilter('all');
-            setRightPanel('reading');
-          }}
-          onCompose={() =>
-            activeMailboxId != null &&
-            setCompose({ open: true, initial: { mailboxId: activeMailboxId } })
-          }
-          onWhitelist={() => setRightPanel('whitelist')}
-          onInject={() => setRightPanel('inject')}
-          onDkim={() => setShowDkim(true)}
-          onAliases={() => setShowAliases(true)}
-          onPurge={async () => {
-            if (activeMailboxId == null) return;
-            if (!confirm('Purge all quarantine messages now?')) return;
-            await api.purgeQuarantine(activeMailboxId);
-            refresh();
-          }}
-        />
+      <Sidebar
+        counts={counts}
+        folder={folder}
+        onFolder={(f) => {
+          setFolder(f);
+          setSelectedId(null);
+          setSelectedIds(new Set());
+          setSearchQuery('');
+          setSearchResults(null);
+          setFilter('all');
+          setRightPanel('reading');
+        }}
+        onCompose={() =>
+          activeMailboxId != null &&
+          setCompose({ open: true, initial: { mailboxId: activeMailboxId } })
+        }
+        onWhitelist={() => setRightPanel('whitelist')}
+        onInject={() => setRightPanel('inject')}
+        onDkim={() => setShowDkim(true)}
+        onAliases={() => setShowAliases(true)}
+        onPurge={async () => {
+          if (activeMailboxId == null) return;
+          if (!confirm('Purge all quarantine messages now?')) return;
+          await api.purgeQuarantine(activeMailboxId);
+          refresh();
+        }}
+      />
 
+      <div className="flex-1 flex min-h-0">
         {folder === 'screener' && activeMailboxId != null ? (
           <Screener
             mailboxId={activeMailboxId}

@@ -14,6 +14,7 @@ vi.mock('../../api', () => ({
     connections: vi.fn(),
     disconnect: vi.fn(),
     gmailConnectUrl: () => '/api/oauth/gmail/start',
+    outlookConnectUrl: () => '/api/oauth/outlook/start',
   },
 }));
 

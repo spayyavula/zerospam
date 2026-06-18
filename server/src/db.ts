@@ -352,6 +352,12 @@ if (!userCols.has('account_id')) {
 }
 if (!userCols.has('email_verified_at')) {
   db.exec('ALTER TABLE users ADD COLUMN email_verified_at INTEGER');
+  // Grandfather users that predate the verification gate as verified — locking
+  // them out on next login would be a regression. This runs ONCE, only when the
+  // column is first added (every pre-existing row is NULL at that point). It must
+  // NOT run on every boot: otherwise a pending (unverified) signup is silently
+  // auto-verified by the next restart, defeating email verification entirely.
+  db.exec(`UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
 }
 if (!userCols.has('tour_completed_at')) {
   db.exec('ALTER TABLE users ADD COLUMN tour_completed_at INTEGER');
@@ -379,9 +385,6 @@ if (!domainCols2.has('account_id')) {
 db.prepare('UPDATE users     SET account_id = ? WHERE account_id IS NULL').run(DEFAULT_ACCOUNT_ID);
 db.prepare('UPDATE mailboxes SET account_id = ? WHERE account_id IS NULL').run(DEFAULT_ACCOUNT_ID);
 db.prepare('UPDATE domains   SET account_id = ? WHERE account_id IS NULL').run(DEFAULT_ACCOUNT_ID);
-// Grandfather pre-feature users as verified — they predate the verification
-// gate and locking them out on next login would be a regression.
-db.exec(`UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL`);
 
 // One-time backfill of attachment_count and FTS for messages predating this schema.
 // Idempotent — if the rows already exist, INSERT OR IGNORE skips them.

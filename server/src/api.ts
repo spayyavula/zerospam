@@ -1,8 +1,14 @@
 import Fastify from 'fastify';
+import type { FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { createReadStream, statSync } from 'node:fs';
+import { lookup as dnsLookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
+import { createReadStream, statSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { db, runInTx } from './db.js';
@@ -16,19 +22,173 @@ import { ensureDkim, dnsRecord } from './dkim.js';
 import { authRoutes } from './routes/auth.js';
 import { screenerRoutes } from './routes/screener.js';
 import { gmailOAuthRoutes } from './routes/oauth-gmail.js';
+import { outlookOAuthRoutes } from './routes/oauth-outlook.js';
 import { connectionsRoutes } from './routes/connections.js';
+import { renderPrivacyPolicyPage, renderTermsOfServicePage } from './legal-pages.js';
 import { requireAuth } from './requireAuth.js';
+import { SESSION_COOKIE_NAME } from './sessions.js';
 import { getScreenerCounts } from './screener.js';
 import { registerOpenApi } from './openapi/register.js';
 
+/**
+ * Serve the built web SPA (web/dist): static files first, then a catch-all
+ * not-found handler that returns index.html for client-side routes. Only
+ * GET/HEAD requests outside the server's own route prefixes get the SPA;
+ * unknown /api, /auth, /public routes still return a JSON 404.
+ */
+export async function registerWebSpa(app: FastifyInstance, root: string): Promise<void> {
+  await app.register(fastifyStatic, { root, wildcard: false });
+
+  const SERVER_PREFIXES = ['/api', '/auth/', '/public/'];
+  app.setNotFoundHandler((req, reply) => {
+    const isServerRoute = SERVER_PREFIXES.some((p) => req.url === p || req.url.startsWith(p));
+    if ((req.method === 'GET' || req.method === 'HEAD') && !isServerRoute) {
+      return reply.type('text/html').sendFile('index.html');
+    }
+    return reply.code(404).send({ error: 'not found' });
+  });
+}
+
+// ---- SSRF guard for the image proxy ----
+// Block requests whose host resolves into private / loopback / link-local /
+// reserved space (incl. the 169.254.169.254 cloud-metadata endpoint), so an
+// attacker-supplied <img> URL can't be used to probe internal services.
+function ipv4Blocked(ip: string): boolean {
+  const p = ip.split('.').map(Number);
+  if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b, c] = p;
+  if (a === 0 || a === 10 || a === 127) return true; // this-network, private, loopback
+  if (a === 169 && b === 254) return true; // link-local (incl. cloud metadata)
+  if (a === 172 && b >= 16 && b <= 31) return true; // private
+  if (a === 192 && b === 168) return true; // private
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+  if (a === 192 && b === 0 && c === 0) return true; // IETF protocol assignments
+  if (a >= 224) return true; // multicast, reserved, broadcast
+  return false;
+}
+
+function ipBlocked(ip: string): boolean {
+  const fam = isIP(ip);
+  if (fam === 4) return ipv4Blocked(ip);
+  if (fam === 6) {
+    const lower = ip.toLowerCase();
+    if (lower === '::1' || lower === '::') return true; // loopback / unspecified
+    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/); // IPv4-mapped
+    if (mapped) return ipv4Blocked(mapped[1]);
+    const head = parseInt(lower.split(':')[0] || '0', 16);
+    if ((head & 0xfe00) === 0xfc00) return true; // fc00::/7 unique-local
+    if ((head & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+    return false;
+  }
+  return true; // not a parseable IP → block
+}
+
+async function assertPublicHost(hostname: string): Promise<void> {
+  const host = hostname.replace(/^\[|\]$/g, ''); // strip IPv6 literal brackets
+  if (isIP(host)) {
+    if (ipBlocked(host)) throw new Error('blocked-address');
+    return;
+  }
+  let records: { address: string }[];
+  try {
+    records = await dnsLookup(host, { all: true });
+  } catch {
+    throw new Error('dns-failed');
+  }
+  if (!records.length || records.some((r) => ipBlocked(r.address))) {
+    throw new Error('blocked-address');
+  }
+}
+
+// Fetch following redirects manually so every hop's host is re-validated; a
+// 3xx that points at an internal address is rejected rather than followed.
+async function safeFetchImage(rawUrl: string): Promise<Response> {
+  let current = rawUrl;
+  for (let hop = 0; hop < 4; hop++) {
+    let parsed: URL;
+    try {
+      parsed = new URL(current);
+    } catch {
+      throw new Error('bad-url');
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('bad-protocol');
+    await assertPublicHost(parsed.hostname);
+    const resp = await fetch(current, {
+      redirect: 'manual',
+      headers: {
+        'User-Agent': 'ZeroSpamMail/1.0 (image proxy; +noreferrer)',
+        Accept: 'image/*',
+      },
+    });
+    if (resp.status >= 300 && resp.status < 400) {
+      const loc = resp.headers.get('location');
+      if (!loc) return resp;
+      current = new URL(loc, current).toString();
+      continue;
+    }
+    return resp;
+  }
+  throw new Error('too-many-redirects');
+}
+
+// CSP allows inline <script> blocks in the built index.html (e.g. Vite's
+// pre-paint theme setter) by their sha256 hash rather than 'unsafe-inline', so
+// only those exact, build-pinned scripts run. Computed from the served file at
+// startup, so it auto-tracks changes; empty in dev (Vite serves the SPA itself).
+function spaInlineScriptHashes(distPath: string): string[] {
+  try {
+    const html = readFileSync(join(distPath, 'index.html'), 'utf8');
+    const hashes: string[] = [];
+    const re = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html))) {
+      if (!m[1].trim()) continue;
+      // The HTML parser normalizes CR/CRLF to LF before the CSP hash is computed,
+      // so normalize here too (built index.html may have CRLF on Windows).
+      const body = m[1].replace(/\r\n?/g, '\n');
+      hashes.push(`'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
+    }
+    return hashes;
+  } catch {
+    return [];
+  }
+}
+
 export async function startApi(opts: { inject?: boolean } = {}) {
-  const app = Fastify({ logger: { level: config.logLevel } });
+  const app = Fastify({ logger: { level: config.logLevel }, trustProxy: config.trustProxy });
   await app.register(cookie);
+  // Security headers (ASVS V14.4). HSTS only takes effect over HTTPS (prod, behind
+  // Caddy TLS). The CSP is tuned for the React SPA; revisit if assets fail to load.
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", ...spaInlineScriptHashes(config.webDistPath)],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    // The webmail loads proxied remote images; COEP would block them.
+    crossOriginEmbedderPolicy: false,
+  });
   await app.register(cors, {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);   // same-origin / non-browser
+      if (origin === config.publicBaseUrl) return cb(null, true); // the app's own origin
       if (config.allowedOrigins.includes(origin)) return cb(null, true);
-      cb(new Error('CORS-not-allowed'), false);
+      // Disallowed: reply WITHOUT CORS headers rather than throwing. Throwing
+      // turns every request carrying a foreign Origin — including same-origin
+      // asset loads the browser tags `crossorigin` — into a 500. cb(null,false)
+      // just omits Access-Control-Allow-Origin, which is the correct rejection.
+      cb(null, false);
     },
     credentials: true,
   });
@@ -61,12 +221,36 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/auth/verify',
     '/public/digest/allow',
     '/api/oauth/gmail/callback',
+    '/api/oauth/outlook/callback',
     '/openapi.json',
     '/docs',
   ];
+  // CSRF defense-in-depth on top of the SameSite=Lax session cookie: reject any
+  // state-changing request that carries our session cookie but whose Origin is
+  // cross-site. Cookie-less (Bearer/native mobile) clients are unaffected — they
+  // aren't subject to browser CSRF. Missing Origin falls through to SameSite.
+  const csrfAllowedOrigins = new Set(
+    [...config.allowedOrigins, config.publicBaseUrl].filter(Boolean),
+  );
   app.addHook('preHandler', async (req, reply) => {
+    const method = req.method;
+    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+      const cookies = (req as any).cookies as Record<string, string> | undefined;
+      const origin = req.headers.origin as string | undefined;
+      if (cookies?.[SESSION_COOKIE_NAME] && origin && !csrfAllowedOrigins.has(origin)) {
+        reply.code(403).send({ error: 'csrf-origin-rejected' });
+        return;
+      }
+    }
     if (PUBLIC_PREFIXES.some((p) => req.url === p || req.url.startsWith(p + '?'))) return;
-    if (opts.inject) {
+    // Static assets and SPA navigation (anything that is not a server route)
+    // are public — only server routes go through auth.
+    const SERVER_PREFIXES = ['/api', '/auth/', '/public/'];
+    const isServerRoute = SERVER_PREFIXES.some((p) => req.url === p || req.url.startsWith(p));
+    if (!isServerRoute && (req.method === 'GET' || req.method === 'HEAD')) return;
+    // Test-only auth shim. Hard-gated to non-production so a stray inject flag
+    // can never bypass auth on a live deployment.
+    if (opts.inject && !config.isProd) {
       const a = req.headers['x-test-account'];
       const u = req.headers['x-test-user'];
       if (a) {
@@ -82,7 +266,18 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
   await app.register(gmailOAuthRoutes);
+  await app.register(outlookOAuthRoutes);
   await app.register(connectionsRoutes);
+
+  app.get('/privacy-policy', async (_req, reply) => {
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return reply.send(renderPrivacyPolicyPage());
+  });
+
+  app.get('/terms-of-service', async (_req, reply) => {
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return reply.send(renderTermsOfServicePage());
+  });
 
   app.get('/api/health', async () => ({ ok: true }));
 
@@ -426,15 +621,14 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     }
     let resp: Response;
     try {
-      resp = await fetch(url, {
-        redirect: 'follow',
-        headers: {
-          'User-Agent': 'ZeroSpamMail/1.0 (image proxy; +noreferrer)',
-          Accept: 'image/*',
-        },
-      });
+      resp = await safeFetchImage(url);
     } catch (e: any) {
-      return reply.code(502).send({ error: e?.message ?? 'fetch failed' });
+      const msg = e?.message ?? 'fetch failed';
+      // Don't leak internal-topology detail; collapse SSRF rejections to 400.
+      if (msg === 'blocked-address' || msg === 'bad-url' || msg === 'bad-protocol') {
+        return reply.code(400).send({ error: 'bad url' });
+      }
+      return reply.code(502).send({ error: msg });
     }
     if (!resp.ok || !resp.body) {
       return reply.code(resp.status || 502).send({ error: `upstream ${resp.status}` });
@@ -1386,6 +1580,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     const r = await ingest(raw, body.to);
     return r ?? { error: 'no such mailbox' };
   });
+
+  // Serve the built SPA in non-test runs. (Tests use opts.inject and exercise
+  // registerWebSpa directly against a temp dir.)
+  await registerWebSpa(app, config.webDistPath);
 
   if (opts.inject) {
     await app.ready();

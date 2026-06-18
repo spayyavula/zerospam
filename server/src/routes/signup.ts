@@ -111,6 +111,14 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
     );
     const verifyUrl = `${config.publicBaseUrl}/auth/verify?t=${token}`;
 
+    // Outside production, surface the verify link in the server log. In dev the
+    // default SEND_MODE=loopback delivers via our own SMTP, which rejects external
+    // recipients (550 No such mailbox), so the email never arrives — this lets a
+    // developer complete verification by clicking the logged URL.
+    if (!config.isProd) {
+      app.log.info({ email, verifyUrl }, 'signup: verification link (dev)');
+    }
+
     // Dispatch verification email (best-effort — don't fail signup if mail fails)
     try {
       await sendMessage({

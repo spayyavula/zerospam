@@ -9,7 +9,7 @@ function readTheme(): Theme {
     const t = document.documentElement.dataset.theme;
     if (t === 'light' || t === 'dark') return t;
   }
-  return 'dark';
+  return 'light';
 }
 
 export function useTheme(): [Theme, (t: Theme) => void, () => void] {

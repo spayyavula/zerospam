@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 256 256"
+     width="256" height="256"
+     role="img"
+     aria-label="Blue Shield Logo">
+  <title>Blue Shield Logo</title>
+  <defs>
+    <linearGradient id="shieldBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3AA0FF"/>
+      <stop offset="100%" stop-color="#0A84FF"/>
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path d="M128 20c-20.3 17.8-49.4 31.7-72 31.7a10 10 0 0 0-10 10V124c0 55.6 37.3 85.2 80.4 100.2a10 10 0 0 0 6.7.1C176.7 209.2 210 180 210 124V61.7a10 10 0 0 0-10-10c-22.6 0-51.7-13.9-72-31.7a11.8 11.8 0 0 0-15.4 0z"
+        fill="url(#shieldBlue)"
+        filter="url(#softGlow)"/>
+  <path d="M128 20c-20.3 17.8-49.4 31.7-72 31.7a10 10 0 0 0-10 10V124c0 55.6 37.3 85.2 80.4 100.2a10 10 0 0 0 6.7.1C176.7 209.2 210 180 210 124V61.7a10 10 0 0 0-10-10c-22.6 0-51.7-13.9-72-31.7a11.8 11.8 0 0 0-15.4 0z"
+        fill="none"
+        stroke="#005FCC"
+        stroke-width="8"/>
+  <path d="M128 68v88"
+        stroke="#EAF4FF"
+        stroke-width="12"
+        stroke-linecap="round"/>
+  <path d="M88 116h80"
+        stroke="#EAF4FF"
+        stroke-width="12"
+        stroke-linecap="round"/>
+</svg>

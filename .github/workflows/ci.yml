@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master, feat/quarantine-digest]
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # --legacy-peer-deps: the apps/mobile workspace has an unresolved
+      # react-native-reanimated/react-native-worklets peer conflict that would
+      # otherwise fail the clean install. Versions still come from the committed
+      # lockfile, so server/web dependency resolution is unaffected.
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+      - run: npm test --workspace=server
+
+  audit:
+    name: Audit server production deps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      # Gate on the deployed server runtime only (high/critical). Dev/test and the
+      # Expo mobile toolchain are excluded — they don't ship to production.
+      - run: npm audit --workspace=server --omit=dev --audit-level=high

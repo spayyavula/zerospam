@@ -71,6 +71,18 @@ export function parseAllowedOrigins(raw: string | undefined): string[] {
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
+// Coerce TRUST_PROXY into the shape Fastify/proxy-addr accepts.
+// 'true'/'false' → boolean; a bare integer → hop count; anything else
+// (named subnet like 'loopback', a CIDR, or a comma list) → passed through.
+export function parseTrustProxy(raw: string | undefined): boolean | number | string {
+  if (raw === undefined || raw.trim() === '') return 'loopback';
+  const v = raw.trim();
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v;
+}
+
 export const config = {
   smtpPort: envInt('SMTP_PORT', 2525),
   apiPort: envInt('API_PORT', 8025),
@@ -95,6 +107,16 @@ export const config = {
     dataDir: process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : defaultDataDir,
   }),
   allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
+  // Reverse-proxy trust for deriving the real client IP from X-Forwarded-For.
+  // Default 'loopback' trusts only a same-host proxy (Caddy on 127.0.0.1/::1),
+  // so XFF from arbitrary clients can't spoof req.ip (rate-limit / audit source).
+  // Override with TRUST_PROXY (e.g. a CIDR, comma list, hop count, or 'true').
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+  // Session lifetimes. Idle is a sliding window refreshed on each authenticated
+  // request; absolute is a hard cap from session creation that activity cannot
+  // extend (ASVS V3.3.2 — periodic re-auth even for active sessions).
+  sessionIdleTtlMs: envInt('SESSION_IDLE_TTL_DAYS', 30) * 24 * 60 * 60 * 1000,
+  sessionAbsoluteTtlMs: envInt('SESSION_ABSOLUTE_TTL_DAYS', 90) * 24 * 60 * 60 * 1000,
   rateLimitLoginPerMin: envInt('RATE_LIMIT_LOGIN_PER_MIN', 10),
   rateLimitSignupPerMin: envInt('RATE_LIMIT_SIGNUP_PER_MIN', 5),
   rateLimitAuthPerMin: envInt('RATE_LIMIT_AUTH_PER_MIN', 30),
@@ -105,9 +127,23 @@ export const config = {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   },
+  microsoft: {
+    clientId: process.env.MICROSOFT_CLIENT_ID ?? '',
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? '',
+    tenant: process.env.MICROSOFT_TENANT ?? 'common',
+  },
   connectionPollIntervalSec: envInt('CONNECTION_POLL_INTERVAL_SEC', 60),
   signupDomain: process.env.SIGNUP_DOMAIN ?? 'zero-spam.email',
   verifyTokenExpiryHours: envInt('VERIFY_TOKEN_EXPIRY_HOURS', 24),
+  // Absolute path to the built web SPA (web/dist). Served in production by
+  // @fastify/static. Overridable for the Docker image layout via WEB_DIST_PATH.
+  webDistPath: process.env.WEB_DIST_PATH ?? resolve(SERVER_ROOT, '..', 'web', 'dist'),
+  // Inbound SMTP STARTTLS cert/key (PEM file paths). When both are set, the
+  // SMTP server offers STARTTLS; otherwise it runs plaintext (dev/test).
+  tls: {
+    certPath: process.env.TLS_CERT_PATH ?? '',
+    keyPath: process.env.TLS_KEY_PATH ?? '',
+  },
 } as const;
 
 export type Config = typeof config;
@@ -165,4 +201,10 @@ export function loadConnectionSecret(): Buffer {
 export function gmailRedirectUri(): string {
   if (!config.publicBaseUrl) throw new Error('PUBLIC_BASE_URL is unset; cannot build OAuth redirect URI');
   return `${config.publicBaseUrl}/api/oauth/gmail/callback`;
+}
+
+// Absolute redirect URI Microsoft calls back. Requires PUBLIC_BASE_URL.
+export function outlookRedirectUri(): string {
+  if (!config.publicBaseUrl) throw new Error('PUBLIC_BASE_URL is unset; cannot build OAuth redirect URI');
+  return `${config.publicBaseUrl}/api/oauth/outlook/callback`;
 }
