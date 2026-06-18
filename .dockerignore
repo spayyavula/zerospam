@@ -3,6 +3,11 @@
 **/.env
 **/.env.*
 !**/.env.production.example
+# Private keys / certs — never copy into the build context (e.g. the EC2 SSH key)
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
 server/data
 .git
 .omc
