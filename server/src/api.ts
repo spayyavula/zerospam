@@ -28,6 +28,7 @@ import { renderPrivacyPolicyPage, renderTermsOfServicePage } from './legal-pages
 import { requireAuth } from './requireAuth.js';
 import { SESSION_COOKIE_NAME } from './sessions.js';
 import { getScreenerCounts } from './screener.js';
+import { registerOpenApi } from './openapi/register.js';
 
 /**
  * Serve the built web SPA (web/dist): static files first, then a catch-all
@@ -209,6 +210,8 @@ export async function startApi(opts: { inject?: boolean } = {}) {
 
   await app.register(rateLimit, { global: false });
 
+  await registerOpenApi(app);
+
   // Public routes (no auth) — health check + login/logout
   const PUBLIC_PREFIXES = [
     '/api/health',
@@ -219,6 +222,8 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/public/digest/allow',
     '/api/oauth/gmail/callback',
     '/api/oauth/outlook/callback',
+    '/openapi.json',
+    '/docs',
   ];
   // CSRF defense-in-depth on top of the SameSite=Lax session cookie: reject any
   // state-changing request that carries our session cookie but whose Origin is

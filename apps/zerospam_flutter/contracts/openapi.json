@@ -1,0 +1,1239 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ZeroSpam API (mobile slice)",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8025"
+    }
+  ],
+  "tags": [
+    {
+      "name": "mobile",
+      "description": "Endpoints consumed by the mobile slice"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Device token from POST /api/auth/devices"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": ".+@.+"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          },
+          "totp": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "needs_totp": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DeviceRegisterRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android",
+              "web"
+            ]
+          },
+          "appVersion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "DeviceRegisterResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "AuthMe": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "email": {
+                "type": "string"
+              },
+              "totp_enabled": {
+                "type": "boolean"
+              },
+              "tour_completed_at": {
+                "type": "integer",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "totp_enabled"
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "Mailbox": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "address": {
+            "type": "string"
+          },
+          "domain_id": {
+            "type": "integer"
+          },
+          "display_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "quarantine_ttl_hours": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "domain_id",
+          "quarantine_ttl_hours",
+          "created_at"
+        ]
+      },
+      "FolderCount": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "unread": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "unread"
+        ]
+      },
+      "MailboxCounts": {
+        "type": "object",
+        "properties": {
+          "inbox": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "unread": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "unread"
+            ]
+          },
+          "screener": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "unread": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "unread"
+            ]
+          },
+          "quarantine": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "unread": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "unread"
+            ]
+          },
+          "sent": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "unread": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "unread"
+            ]
+          },
+          "trash": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "unread": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "unread"
+            ]
+          },
+          "drafts": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "unread": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "unread"
+            ]
+          }
+        },
+        "required": [
+          "inbox",
+          "screener",
+          "quarantine",
+          "sent",
+          "trash",
+          "drafts"
+        ]
+      },
+      "MessageSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mailbox_id": {
+            "type": "integer"
+          },
+          "folder": {
+            "type": "string",
+            "enum": [
+              "inbox",
+              "quarantine",
+              "sent",
+              "trash"
+            ]
+          },
+          "from_address": {
+            "type": "string"
+          },
+          "from_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "to_addresses": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "preview": {
+            "type": "string",
+            "nullable": true
+          },
+          "received_at": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "type": "integer",
+            "nullable": true
+          },
+          "read": {
+            "type": "integer"
+          },
+          "starred": {
+            "type": "integer"
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "attachment_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "mailbox_id",
+          "folder",
+          "from_address",
+          "to_addresses",
+          "received_at",
+          "read",
+          "starred",
+          "size_bytes",
+          "attachment_count"
+        ]
+      },
+      "MessageDetail": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "mailbox_id": {
+                "type": "integer"
+              },
+              "folder": {
+                "type": "string",
+                "enum": [
+                  "inbox",
+                  "quarantine",
+                  "sent",
+                  "trash"
+                ]
+              },
+              "from_address": {
+                "type": "string"
+              },
+              "from_name": {
+                "type": "string",
+                "nullable": true
+              },
+              "to_addresses": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string",
+                "nullable": true
+              },
+              "preview": {
+                "type": "string",
+                "nullable": true
+              },
+              "received_at": {
+                "type": "integer"
+              },
+              "expires_at": {
+                "type": "integer",
+                "nullable": true
+              },
+              "read": {
+                "type": "integer"
+              },
+              "starred": {
+                "type": "integer"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "attachment_count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "mailbox_id",
+              "folder",
+              "from_address",
+              "to_addresses",
+              "received_at",
+              "read",
+              "starred",
+              "size_bytes",
+              "attachment_count"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "body_text": {
+                "type": "string",
+                "nullable": true
+              },
+              "body_html": {
+                "type": "string",
+                "nullable": true
+              },
+              "cc_addresses": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        ]
+      },
+      "SearchMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mailbox_id": {
+            "type": "integer"
+          },
+          "folder": {
+            "type": "string",
+            "enum": [
+              "inbox",
+              "quarantine",
+              "sent",
+              "trash"
+            ]
+          },
+          "from_address": {
+            "type": "string"
+          },
+          "from_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "preview": {
+            "type": "string",
+            "nullable": true
+          },
+          "received_at": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "type": "integer",
+            "nullable": true
+          },
+          "read": {
+            "type": "integer"
+          },
+          "starred": {
+            "type": "integer"
+          },
+          "attachment_count": {
+            "type": "integer"
+          },
+          "whitelist_match": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "mailbox_id",
+          "folder",
+          "from_address",
+          "received_at",
+          "read",
+          "starred",
+          "attachment_count"
+        ]
+      },
+      "MarkReadRequest": {
+        "type": "object",
+        "properties": {
+          "read": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StarMessageRequest": {
+        "type": "object",
+        "properties": {
+          "starred": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MoveMessageRequest": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string",
+            "enum": [
+              "inbox",
+              "quarantine",
+              "trash"
+            ]
+          }
+        },
+        "required": [
+          "folder"
+        ],
+        "additionalProperties": false
+      },
+      "OkResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Log in (sets session cookie)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/devices": {
+      "post": {
+        "operationId": "registerDevice",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Register a device, get a bearer token",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceRegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Current user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMe"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mailboxes": {
+      "get": {
+        "operationId": "listMailboxes",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "List mailboxes",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Mailbox"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mailboxes/{id}/counts": {
+      "get": {
+        "operationId": "getMailboxCounts",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Get per-folder mailbox counts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailboxCounts"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mailbox not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages": {
+      "get": {
+        "operationId": "listMessages",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "List messages in a folder",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mailboxId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "folder",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "inbox",
+                "quarantine",
+                "sent",
+                "trash"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MessageSummary"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mailbox not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{id}": {
+      "get": {
+        "operationId": "getMessage",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Get one message",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMessage",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Delete a message",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "operationId": "searchMessages",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Search messages",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mailboxId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "folder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "inbox",
+                "quarantine",
+                "sent",
+                "trash"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SearchMessage"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mailbox not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{id}/read": {
+      "post": {
+        "operationId": "markRead",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Set message read state",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{id}/move": {
+      "post": {
+        "operationId": "moveMessage",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Move a message to another folder",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{id}/star": {
+      "post": {
+        "operationId": "starMessage",
+        "tags": [
+          "mobile"
+        ],
+        "summary": "Set message starred state",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

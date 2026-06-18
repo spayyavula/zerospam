@@ -1,0 +1,56 @@
+_version = 1
+
+# Open a pull request with the work product of each run.
+[run.pull_request]
+enabled = true
+draft = false
+
+# Default sandbox environment: LOCAL Docker (no cloud). The local `docker`
+# provider runs PREBUILT images only, so build the toolchain image once before
+# the first run (~1.2GB; Node 22 + Flutter stable + Dart + JDK 17):
+#   docker build -t zerospam-mobile:local -f .fabro/Dockerfile .fabro
+[run.environment]
+id = "zerospam-mobile-local"
+
+[environments.zerospam-mobile-local]
+provider = "docker"
+
+[environments.zerospam-mobile-local.image]
+docker = "zerospam-mobile:local"
+
+[environments.zerospam-mobile-local.resources]
+cpu = 4
+memory = "8GB"
+
+[environments.zerospam-mobile-local.network]
+mode = "allow_all"
+
+# Alternative: Daytona cloud sandbox, which builds .fabro/Dockerfile into a
+# snapshot directly (no pre-build). To use it, set the id above to
+# "zerospam-mobile" and configure a key: `fabro secret set DAYTONA_API_KEY ...`.
+[environments.zerospam-mobile]
+provider = "daytona"
+
+[environments.zerospam-mobile.image]
+dockerfile = { path = "Dockerfile" }
+
+[environments.zerospam-mobile.resources]
+cpu = 8
+memory = "16GB"
+disk = "30GB"
+
+[environments.zerospam-mobile.lifecycle]
+auto_stop = "30m"
+
+[environments.zerospam-mobile.labels]
+repo = "spayyavula/zerospam"
+
+# Keep the Dart client (apps/zerospam_flutter/lib/data/generated) regenerated and
+# formatted whenever an agent edits the OpenAPI document. Uncomment to enable.
+# [[run.hooks]]
+# id = "format-dart"
+# name = "format-dart"
+# event = "post_tool_use"
+# matcher = "write_file|edit_file|apply_patch"
+# script = "cd apps/zerospam_flutter && dart format lib test >/dev/null 2>&1 || true"
+# blocking = false

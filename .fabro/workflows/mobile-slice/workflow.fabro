@@ -1,0 +1,44 @@
+digraph MobileSlice {
+    graph [
+        goal="Implement the referenced plan for the ZeroSpam mobile slice and ship it green",
+        model_stylesheet="
+            * { model: gpt-5.5; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    // --- Preflight: fail fast before spending model tokens ---
+    toolchain [label="Toolchain", shape=parallelogram, max_retries=0,
+        script="node --version && flutter --version && dart --version && java -version 2>&1"]
+    deps [label="Install deps", shape=parallelogram, max_retries=1,
+        script="npm install 2>&1"]
+    preflight_build [label="Preflight build", shape=parallelogram, max_retries=0,
+        script="npm run build --workspace=server 2>&1"]
+
+    // --- Implement + quality pass ---
+    implement [label="Implement", reasoning_effort="high",
+        prompt="Read the plan file referenced in the goal and implement every step of the ZeroSpam mobile slice. Backend changes live under server/ (Fastify + vitest); the Flutter app under apps/zerospam_flutter/ (Riverpod + dart-dio generated client). Use red/green TDD. If you edit server/src/openapi/spec.ts, keep apps/zerospam_flutter/contracts/openapi.json and the generated client (lib/data/generated) in sync, and remember build_runner must run inside lib/data/generated."]
+    simplify [label="Simplify", model="gpt-5.4-mini",
+        prompt="Review the diff you just produced. Simplify for clarity, reuse, and efficiency WITHOUT changing behavior: delete dead code, tighten naming, prefer existing helpers and repositories. Do not add features or new dependencies."]
+
+    // --- Verify gate: the whole slice must be green ---
+    verify [label="Verify", shape=parallelogram, goal_gate=true, retry_target="fixup",
+        script="npm run build --workspace=server 2>&1 && npm test --workspace=server 2>&1 && cd apps/zerospam_flutter && flutter pub get 2>&1 && ( cd lib/data/generated && dart pub get 2>&1 && dart run build_runner build --delete-conflicting-outputs 2>&1 ) && flutter analyze 2>&1 && flutter test 2>&1"]
+    fixup [label="Fixup", model="gpt-5.4-mini", max_visits=3,
+        prompt="The verify step failed. Read the captured output from context and fix the failures: server build/test (vitest), Flutter analyze lints, or Flutter tests. Do not re-run commands manually — the graph re-verifies after you finish."]
+
+    start -> toolchain
+    toolchain -> deps [condition="outcome=succeeded"]
+    toolchain -> exit
+    deps -> preflight_build [condition="outcome=succeeded"]
+    deps -> exit
+    preflight_build -> implement [condition="outcome=succeeded"]
+    preflight_build -> exit
+    implement -> simplify -> verify
+    verify -> exit [condition="outcome=succeeded"]
+    verify -> fixup
+    fixup -> verify
+}

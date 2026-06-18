@@ -1,0 +1,23 @@
+digraph GhImplementMobile {
+    graph [
+        goal="Implement a GitHub issue for the ZeroSpam mobile slice",
+        model_stylesheet="
+            * { model: gpt-5.5; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    plan [label="Plan",
+        prompt="Fetch the GitHub issue named in the goal:\n\n    gh issue view $goal --json title,body,labels,comments\n\nRead the title, body, and comments carefully. This repo is a Node monorepo (Fastify server under server/, shared types under packages/shared-api) plus a Flutter slice under apps/zerospam_flutter/ whose Dart client is generated from the backend OpenAPI document. Decide whether the change is backend, Flutter, or both.\n\nWrite a detailed implementation plan to plan.md containing:\n- Summary of the issue\n- Whether it touches the backend, the Flutter app, or both\n- Exact files to create or modify\n- Step-by-step approach (red/green TDD)\n- Tests to add or update (vitest for server, flutter_test for the app)\n- If the OpenAPI document changes: how the generated client stays in sync\n\nThe plan must be specific enough for another agent to implement without seeing the issue. Respond with the path to the plan file (plan.md)."]
+
+    implement [label="Implement", shape=house,
+        stack.child_workflow="fabro/workflows/mobile-slice/workflow.fabro",
+        manager.max_cycles=100]
+
+    start -> plan
+    plan -> implement [fidelity="summary:high"]
+    implement -> exit
+}

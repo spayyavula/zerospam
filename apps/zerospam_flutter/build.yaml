@@ -1,0 +1,8 @@
+targets:
+  $default:
+    builders:
+      built_value_generator|built_value:
+        enabled: true
+        generate_for:
+          include:
+            - lib/data/generated/**

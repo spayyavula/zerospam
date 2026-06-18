@@ -1,0 +1,62 @@
+digraph MobileRedesign {
+    graph [
+        goal="Redesign the ZeroSpam Flutter app per docs/superpowers/plans/2026-06-13-mobile-redesign.md (Material 3 + iOS-adaptive design system, 3 redesigned screens, app shell, message features documenting existing backend endpoints, Codemagic CI). Implement phase by phase; every phase must pass `flutter analyze && flutter test`.",
+        model_stylesheet="
+            * { model: gpt-5.5; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    // The plan + spec are in the repo; read them first.
+    PLAN [label="Read plan", shape=parallelogram, max_retries=0,
+        script="echo '--- PLAN ---'; sed -n '1,40p' docs/superpowers/plans/2026-06-13-mobile-redesign.md; echo '--- baseline gate ---'; cd apps/zerospam_flutter && flutter pub get 2>&1 && flutter analyze 2>&1 && flutter test 2>&1"]
+
+    // --- P1 Design system ---
+    p1 [label="P1 Design system", max_visits=4,
+        prompt="Read docs/superpowers/plans/2026-06-13-mobile-redesign.md fully, then implement PHASE 0 (add go_router + intl) and PHASE 1 (the lib/theme design system + wire into app.dart) exactly as specified. Material 3 + adaptive. When returning here after a failed gate, read the captured analyze/test output in context and fix the issues. Do not advance until `cd apps/zerospam_flutter && flutter analyze && flutter test` would pass."]
+    g1 [label="Gate P1", shape=parallelogram, goal_gate=true, retry_target="p1",
+        script="cd apps/zerospam_flutter && flutter pub get 2>&1 && flutter analyze 2>&1 && flutter test 2>&1"]
+
+    // --- P2 Redesign screens ---
+    p2 [label="P2 Redesign screens", max_visits=4,
+        prompt="Implement PHASE 2 of the plan: redesign Login, Inbox, and Message-detail to the lib/theme design system with loading/empty/error states, pull-to-refresh, accessibility, and the golden tests (non-gating). CRITICAL: preserve the existing widget-test Keys (email/password/totp/submit/error/inbox-error/detail-error). On gate failure, read the output and fix."]
+    g2 [label="Gate P2", shape=parallelogram, goal_gate=true, retry_target="p2",
+        script="cd apps/zerospam_flutter && flutter pub get 2>&1 && flutter analyze 2>&1 && flutter test 2>&1"]
+
+    // --- P3 App shell ---
+    p3 [label="P3 App shell", max_visits=4,
+        prompt="Implement PHASE 3 of the plan: go_router navigation shell with NavigationBar, folder switching (inbox/quarantine/sent/trash via the existing folder param), a Settings screen, and sign-out. Keep the auth widget test green. On gate failure, read the output and fix."]
+    g3 [label="Gate P3", shape=parallelogram, goal_gate=true, retry_target="p3",
+        script="cd apps/zerospam_flutter && flutter pub get 2>&1 && flutter analyze 2>&1 && flutter test 2>&1"]
+
+    // --- P4 Feature loop (existing backend endpoints) ---
+    p4 [label="P4 Features", max_visits=8,
+        prompt="Implement PHASE 4 of the plan: add message features by DOCUMENTING EXISTING backend routes in server/src/openapi/spec.ts, regenerating the dart-dio client (run build_runner INSIDE apps/zerospam_flutter/lib/data/generated), adding a repository method, and wiring the UI. Do them ONE AT A TIME in this order: mark read/unread, star, move, delete, search, folder-count badges. Read each backend handler in server/src/api.ts for exact request/response shapes — never invent them. After EACH feature, ensure `flutter analyze && flutter test` pass before starting the next. If you are running low on remaining work budget, STOP after the current feature's gate is green rather than starting another. On gate failure, read the output and fix."]
+    g4 [label="Gate P4", shape=parallelogram, goal_gate=true, retry_target="p4",
+        script="cd apps/zerospam_flutter && flutter pub get 2>&1 && flutter analyze 2>&1 && flutter test 2>&1"]
+
+    // --- P5 Finalize: Codemagic CI + final verify ---
+    p5 [label="P5 Finalize", max_visits=4,
+        prompt="Implement PHASE 5 of the plan: create codemagic.yaml at the repo root (android-workflow + ios-workflow per the plan), and do a final pass. The PR is opened automatically by Fabro — make sure the working tree is clean and green. On gate failure, read the output and fix."]
+    g5 [label="Gate Final", shape=parallelogram, goal_gate=true, retry_target="p5",
+        script="cd apps/zerospam_flutter && flutter pub get 2>&1 && flutter analyze 2>&1 && flutter test 2>&1"]
+
+    start -> PLAN -> p1 -> g1
+    g1 -> p2 [condition="outcome=succeeded"]
+    g1 -> p1
+    p2 -> g2
+    g2 -> p3 [condition="outcome=succeeded"]
+    g2 -> p2
+    p3 -> g3
+    g3 -> p4 [condition="outcome=succeeded"]
+    g3 -> p3
+    p4 -> g4
+    g4 -> p5 [condition="outcome=succeeded"]
+    g4 -> p4
+    p5 -> g5
+    g5 -> exit [condition="outcome=succeeded"]
+    g5 -> p5
+}

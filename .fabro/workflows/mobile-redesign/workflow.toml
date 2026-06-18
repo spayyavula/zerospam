@@ -1,0 +1,7 @@
+_version = 1
+
+# Fabro opens a pull request with the redesign work product.
+[run.integrations.github.permissions]
+contents = "write"
+issues = "read"
+pull_requests = "write"
