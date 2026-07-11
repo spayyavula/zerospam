@@ -4,7 +4,98 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZeroSpam</title>
+
+    <!-- Primary SEO metadata -->
+    <title>ZeroSpam — Whitelist Email That Blocks Spam Before Your Inbox</title>
+    <meta
+      name="description"
+      content="ZeroSpam is a whitelist-first email screening service. Only senders you approve reach your inbox; unknown senders wait in a Screener. Block spam before it arrives — free, no credit card."
+    />
+    <link rel="canonical" href="https://zero-spam.email/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- Open Graph (social + AI scrapers) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ZeroSpam" />
+    <meta property="og:title" content="ZeroSpam — Whitelist Email That Blocks Spam Before Your Inbox" />
+    <meta
+      property="og:description"
+      content="Whitelist-first email screening. Only approved senders reach your inbox; unknown senders wait in a Screener. Block spam before it arrives."
+    />
+    <meta property="og:url" content="https://zero-spam.email/" />
+    <meta property="og:image" content="https://zero-spam.email/shield-blue.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ZeroSpam — Whitelist Email That Blocks Spam Before Your Inbox" />
+    <meta
+      name="twitter:description"
+      content="Whitelist-first email screening. Only approved senders reach your inbox; unknown senders wait in a Screener."
+    />
+    <meta name="twitter:image" content="https://zero-spam.email/shield-blue.png" />
+
+    <!-- Structured data: Organization + SoftwareApplication + FAQ -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://zero-spam.email/#org",
+            "name": "ZeroSpam",
+            "alternateName": "ZeroSpam Email",
+            "url": "https://zero-spam.email/",
+            "logo": "https://zero-spam.email/shield-blue.png",
+            "description": "Whitelist-first email screening service at zero-spam.email. Only senders you approve reach your inbox; unknown senders wait in a Screener."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "ZeroSpam",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "url": "https://zero-spam.email/",
+            "description": "Whitelist-first email screening service. Only senders you approve reach your inbox; unknown senders wait in a Screener until you decide.",
+            "publisher": { "@id": "https://zero-spam.email/#org" },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How does ZeroSpam block spam before it reaches my inbox?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "ZeroSpam is whitelist-first: only senders you have approved reach your inbox. Unknown senders are held in a Screener so you decide who earns your attention, which stops spam before it ever arrives."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I keep my current email address?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. You keep your existing address and route mail through ZeroSpam, which screens unknown senders automatically. Setup takes about two minutes."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is ZeroSpam free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You can create a free ZeroSpam account with no credit card required and cancel anytime."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
     <!-- Fonts are self-hosted via @fontsource-variable, bundled by Vite (see src/main.tsx) — no third-party font requests. -->
     <script>
       // Sync the theme before first paint to prevent a flash of the wrong palette.

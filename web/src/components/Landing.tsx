@@ -1,4 +1,4 @@
-import { Shield, Mail, CheckCircle2, Zap, Lock, BarChart3, ArrowRight, Github, UserCheck, Clock3, Quote, Inbox } from 'lucide-react';
+import { Shield, Mail, CheckCircle2, Zap, Lock, BarChart3, ArrowRight, UserCheck, Clock3, Quote, Inbox } from 'lucide-react';
 
 const softTestimonials = [
   {
@@ -39,22 +39,23 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zsaccent/10 border border-zsaccent/20 mb-6">
             <Zap className="w-4 h-4 text-zsaccent" />
-            <span className="text-sm font-medium text-zsaccent">Built for busy professionals who want calm, productive days</span>
+            <span className="text-sm font-medium text-zsaccent">Whitelist-first email screening for busy professionals</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Protect your focus.
+            Block spam before it
             <br />
-            Keep your inbox calm.
+            reaches your inbox.
           </h1>
 
           <p className="text-xl text-zsmuted mb-8 max-w-3xl mx-auto">
-            ZeroSpam.email is for people who want deep work without inbox noise. Create your account once,
-            define who you trust, and keep unknown senders out of your attention stream until you are ready.
+            ZeroSpam is a whitelist-first email screening service: only senders you approve reach your inbox,
+            and unknown senders wait in a Screener until you decide. Keep your current address, cut the noise,
+            and protect your focus.
           </p>
 
           <p className="text-base text-zstext/90 mb-8 max-w-2xl mx-auto font-medium">
-            Core promise: protect your focus.
+            A calmer alternative to spam filters that guess — you decide who gets through.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -398,10 +399,6 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
             </a>
             <a href="/terms-of-service" className="hover:text-zsaccent transition">
               Terms of Service
-            </a>
-            <a href="https://github.com" className="hover:text-zsaccent transition inline-flex items-center gap-1">
-              <Github className="w-4 h-4" />
-              GitHub
             </a>
           </div>
         </div>
