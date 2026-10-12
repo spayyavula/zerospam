@@ -12,18 +12,46 @@ function readTheme(): Theme {
   return 'light';
 }
 
+function persist(theme: Theme) {
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    /* private mode */
+  }
+}
+
+/**
+ * Theme state shared by every toggle. The inline script in index.html sets
+ * data-theme before first paint (saved choice, else the device's light/dark setting),
+ * so we initialize from that DOM truth. The choice is saved only when the person
+ * actually picks one, so until then the page keeps following their device.
+ */
 export function useTheme(): [Theme, (t: Theme) => void, () => void] {
-  // The inline script in index.html sets data-theme before paint, so we
-  // initialize from that DOM truth rather than computing the resolution again.
   const [theme, setThemeState] = useState<Theme>(readTheme);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* private mode */ }
   }, [theme]);
 
-  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
-  const toggle = useCallback(() => setThemeState((t) => (t === 'dark' ? 'light' : 'dark')), []);
+  // Other toggles on the page (or another tab) change the theme: stay in sync.
+  useEffect(() => {
+    const sync = () => setThemeState(readTheme());
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const setTheme = useCallback((next: Theme) => {
+    persist(next);
+    setThemeState(next);
+  }, []);
+  const toggle = useCallback(() => {
+    setThemeState((t) => {
+      const next = t === 'dark' ? 'light' : 'dark';
+      persist(next);
+      return next;
+    });
+  }, []);
 
   return [theme, setTheme, toggle];
 }
