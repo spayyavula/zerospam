@@ -14,6 +14,10 @@ import ScreenerScreen from '../features/screener/ScreenerScreen';
 import ComposeScreen from '../features/compose/ComposeScreen';
 import SearchScreen from '../features/search/SearchScreen';
 import MoreScreen from '../features/more/MoreScreen';
+import AliasesScreen from '../features/aliases/AliasesScreen';
+import AliasScreen from '../features/aliases/AliasScreen';
+import NewAliasScreen from '../features/aliases/NewAliasScreen';
+import ForwardTargetsScreen from '../features/aliases/ForwardTargetsScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -66,6 +70,7 @@ function Tabs() {
         options={{ tabBarIcon: icon('people-outline', 'people'), tabBarBadge: waiting ? waiting : undefined }}
       />
       <Tab.Screen name="Quarantine" component={QuarantineScreen} options={{ tabBarIcon: icon('shield-outline', 'shield') }} />
+      <Tab.Screen name="Aliases" component={AliasesScreen} options={{ tabBarIcon: icon('at-circle-outline', 'at-circle') }} />
       <Tab.Screen name="More" component={MoreScreen} options={{ tabBarIcon: icon('ellipsis-horizontal-circle-outline', 'ellipsis-horizontal-circle') }} />
     </Tab.Navigator>
   );
@@ -79,6 +84,9 @@ export default function MainNavigator() {
       <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
       <Stack.Screen name="Message" component={MessageScreen} options={{ title: '' }} />
       <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="Alias" component={AliasScreen} />
+      <Stack.Screen name="NewAlias" component={NewAliasScreen} options={{ title: 'New alias', presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="ForwardTargets" component={ForwardTargetsScreen} options={{ title: 'Forwarding addresses' }} />
       <Stack.Screen
         name="Compose"
         component={ComposeScreen}

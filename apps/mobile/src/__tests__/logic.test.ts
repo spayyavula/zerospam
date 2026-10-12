@@ -1,6 +1,7 @@
 import { buildMessageHtml, buildTextHtml, hasRemoteImages, rewriteImages } from '../lib/messageHtml';
 import { expiresIn, initials, parseAddressList, shortDate, splitAddresses } from '../lib/format';
-import { usernameProblem, validateRecipients } from '../lib/validation';
+import { localPartProblem, usernameProblem, validateRecipients } from '../lib/validation';
+import { aliasStatus } from '../features/aliases/aliasStatus';
 import { light } from '../theme/tokens';
 
 describe('message HTML', () => {
@@ -87,5 +88,24 @@ describe('validation', () => {
     expect(validateRecipients('', '', '')).toEqual({ ok: false, error: 'Add at least one recipient.' });
     expect(validateRecipients('a@x.com', 'nope', '')).toMatchObject({ ok: false });
     expect(validateRecipients('a@x.com, b@y.org', '', 'c@z.net')).toEqual({ ok: true, to: ['a@x.com', 'b@y.org'], cc: [], bcc: ['c@z.net'] });
+  });
+});
+
+describe('aliases', () => {
+  const base = { abused: 0, expires_at: null, mode: 'store' as const, forward_target_verified_at: null };
+
+  it('status', () => {
+    expect(aliasStatus(base).label).toBe('Active');
+    expect(aliasStatus({ ...base, abused: 1 })).toMatchObject({ label: 'Off', off: true });
+    expect(aliasStatus({ ...base, expires_at: 5 }, 10)).toMatchObject({ label: 'Expired', off: true });
+    expect(aliasStatus({ ...base, mode: 'forward', forward_target_verified_at: 1 }).label).toBe('Forwards');
+    expect(aliasStatus({ ...base, mode: 'both', forward_target_verified_at: null }).label).toBe('Not forwarding');
+  });
+
+  it('local part rule', () => {
+    expect(localPartProblem('')).toBeNull();
+    expect(localPartProblem('shop.2026')).toBeNull();
+    expect(localPartProblem('-bad')).not.toBeNull();
+    expect(localPartProblem('rv.abc')).not.toBeNull();
   });
 });
