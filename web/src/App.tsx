@@ -117,13 +117,19 @@ export default function App() {
     loadAuthState().catch(() => setAuthed(false));
   }, []);
 
-  // initial mailbox load
+  // Load mailboxes once signed in. Keyed on `authed` so signing in from the login
+  // gate (when the first load would have 401'd) loads them without a page refresh;
+  // otherwise every mailbox-scoped panel (Aliases, Whitelist, ...) silently won't open.
   useEffect(() => {
-    api.mailboxes().then((m) => {
-      setMailboxes(m);
-      if (m.length > 0) setActiveMailboxId(m[0].id);
-    });
-  }, []);
+    if (!authed) return;
+    api
+      .mailboxes()
+      .then((m) => {
+        setMailboxes(m);
+        if (m.length > 0) setActiveMailboxId((cur) => cur ?? m[0].id);
+      })
+      .catch(() => setMailboxes([]));
+  }, [authed]);
 
   const refreshCounts = useCallback(async () => {
     if (activeMailboxId == null) return;
