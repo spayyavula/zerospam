@@ -31,8 +31,13 @@ export function isValidUsername(s: string): boolean {
   return USERNAME_RE.test(s) && !HAS_BAD_SEPARATORS.test(s);
 }
 
+// Local parts starting with this prefix are reverse aliases minted by alias forwarding
+// (see forwarding.ts). Kept as a literal here to avoid importing the mail stack.
+const REVERSE_ALIAS_PREFIX = 'rv.';
+
 export function isReserved(s: string): boolean {
-  return RESERVED.has(s.toLowerCase());
+  const lower = s.toLowerCase();
+  return RESERVED.has(lower) || lower.startsWith(REVERSE_ALIAS_PREFIX);
 }
 
 export function isUsernameAvailable(username: string, domain: string): boolean {
@@ -41,6 +46,11 @@ export function isUsernameAvailable(username: string, domain: string): boolean {
   // Lowercase both inputs because seedMailbox/insert normalizes to lowercase
   // (the schema doesn't COLLATE NOCASE, so case-sensitive equality is required).
   const address = `${username.toLowerCase()}@${domain.toLowerCase()}`;
-  const existing = db.prepare('SELECT 1 FROM mailboxes WHERE address = ?').get(address);
+  // A username must not shadow an existing alias or reverse alias either — RCPT TO
+  // resolves mailboxes first, so the alias would silently stop receiving mail.
+  const existing =
+    db.prepare('SELECT 1 FROM mailboxes WHERE address = ?').get(address) ||
+    db.prepare('SELECT 1 FROM aliases WHERE address = ?').get(address) ||
+    db.prepare('SELECT 1 FROM reverse_aliases WHERE address = ?').get(address);
   return !existing;
 }

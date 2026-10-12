@@ -2,7 +2,7 @@
 // Style is deliberately close to the digest email so the confirm page
 // doesn't read as a phishing landing.
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -11,7 +11,7 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-const SHELL_HEAD = `<!doctype html>
+export const SHELL_HEAD = `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ZeroSpam</title>
 <style>
@@ -28,7 +28,7 @@ const SHELL_HEAD = `<!doctype html>
   .sender { font-weight:600; font-size:16px; word-break:break-all; }
 </style>
 </head><body>`;
-const SHELL_FOOT = `</body></html>`;
+export const SHELL_FOOT = `</body></html>`;
 
 export function renderConfirmPage(args: {
   token: string;

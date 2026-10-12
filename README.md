@@ -17,6 +17,13 @@ Whitelist-first SMTP server + Outlook-style webmail. Default-deny inbox; non-whi
 - **Trust on first send** — every recipient you send to is auto-added to your mailbox's whitelist, so their replies bypass quarantine.
 - **Compose UI** — three-pane modal with from/to/cc/subject/body. Sent copies land in the Sent folder.
 
+### Aliases (forwarding + private replies)
+- **Disposable aliases** per mailbox with optional expiry and one-click block.
+- **Delivery mode per alias**: keep in ZeroSpam, forward only, or keep + forward to a verified external address (e.g. your Gmail). Forwarding respects the whitelist — unknown senders still go to quarantine.
+- **Reverse-alias replies** — forwarded mail comes From/Reply-To a per-contact `rv.*` address; replying from Gmail/Outlook relays out as the alias, so contacts never see your real address. Replies must come from the verified address and pass DMARC.
+- **Abuse limits** — per-account alias and forwarding-address caps, hourly forward/reply caps. Forwards that can't happen fall back to storing the message.
+- Design: [docs/superpowers/specs/2026-10-12-alias-forwarding-design.md](docs/superpowers/specs/2026-10-12-alias-forwarding-design.md).
+
 ### UI
 - Three-pane Outlook layout (sidebar | message list | reading pane).
 - **Full-text search** (SQLite FTS5) across subject + sender + body, ranked by relevance. `/` to focus.
@@ -100,6 +107,14 @@ SESSION_SECRET=<32+ random chars>      # required in production
 ALLOWED_ORIGINS=http://localhost:5173  # comma-separated, CORS allowlist
 RATE_LIMIT_LOGIN_PER_MIN=10            # default 10
 RATE_LIMIT_AUTH_PER_MIN=30             # default 30
+
+# Alias forwarding & abuse limits
+ALIAS_MAX_PER_ACCOUNT=50               # aliases per account
+FORWARD_TARGETS_MAX_PER_ACCOUNT=5      # verified forwarding addresses per account
+ALIAS_FORWARD_MAX_PER_HOUR=200         # over this, mail is stored instead of forwarded
+ALIAS_REPLY_MAX_PER_HOUR=50            # over this, replies get SMTP 451 (sender retries)
+ALIAS_REPLY_REQUIRE_DMARC=true         # set false only in local dev (no real DNS)
+FORWARD_VERIFY_EXPIRY_HOURS=24
 ```
 
 ## Deployment

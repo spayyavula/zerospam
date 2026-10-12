@@ -144,6 +144,19 @@ export const config = {
     certPath: process.env.TLS_CERT_PATH ?? '',
     keyPath: process.env.TLS_KEY_PATH ?? '',
   },
+  // Alias forwarding / reverse-alias replies and abuse limits.
+  // See docs/superpowers/specs/2026-10-12-alias-forwarding-design.md §10.
+  aliases: {
+    maxPerAccount: envInt('ALIAS_MAX_PER_ACCOUNT', 50),
+    forwardTargetsMaxPerAccount: envInt('FORWARD_TARGETS_MAX_PER_ACCOUNT', 5),
+    forwardMaxPerHour: envInt('ALIAS_FORWARD_MAX_PER_HOUR', 200),
+    replyMaxPerHour: envInt('ALIAS_REPLY_MAX_PER_HOUR', 50),
+    // Replies to a reverse alias must come from the verified target AND pass DMARC,
+    // otherwise anyone could spoof the user's real address and send *as* their alias.
+    // Only disable for local dev, where mailauth results are always inconclusive.
+    replyRequireDmarc: (process.env.ALIAS_REPLY_REQUIRE_DMARC ?? 'true').toLowerCase() !== 'false',
+    verifyTokenExpiryHours: envInt('FORWARD_VERIFY_EXPIRY_HOURS', 24),
+  },
 } as const;
 
 export type Config = typeof config;

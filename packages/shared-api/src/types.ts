@@ -83,6 +83,39 @@ export type Alias = {
   received_count: number;
   last_seen: number | null;
   created_at: number;
+  /** store = hosted mailbox only; forward = relay to forward target only; both = store + relay. */
+  mode: AliasMode;
+  forward_target_id: number | null;
+  forward_target_email: string | null;
+  forward_target_verified_at: number | null;
+  forwarded_count: number;
+  replied_count: number;
+};
+
+export type AliasMode = 'store' | 'forward' | 'both';
+
+export type PatchAliasRequest = {
+  label?: string | null;
+  mode?: AliasMode;
+  forwardTargetId?: number | null;
+};
+
+export type AliasUsage = { count: number; max: number };
+
+/** An external address alias mail may be forwarded to. Must be verified before use. */
+export type ForwardTarget = {
+  id: number;
+  account_id: number;
+  email: string;
+  verified_at: number | null;
+  verify_expires_at: number | null;
+  created_at: number;
+};
+
+export type CreateForwardTargetResponse = {
+  id: number;
+  email: string;
+  verified: boolean;
 };
 
 export type WhitelistRule = {
@@ -221,11 +254,15 @@ export type CreateAliasRequest = {
   label?: string;
   localPart?: string;
   expiresInDays?: number | null;
+  mode?: AliasMode;
+  forwardTargetId?: number | null;
 };
 export type CreateAliasResponse = {
   id: number;
   address: string;
   expires_at: number | null;
+  mode: AliasMode;
+  forward_target_id: number | null;
 };
 
 export type AddWhitelistRuleRequest = {

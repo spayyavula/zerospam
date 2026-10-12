@@ -80,7 +80,7 @@ function preview(text: string | undefined): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, 200);
 }
 
-function buildTransport() {
+export function buildTransport() {
   if (config.sendMode === 'relay') {
     if (!config.relay.host) {
       throw new Error('SEND_MODE=relay but RELAY_HOST is empty');

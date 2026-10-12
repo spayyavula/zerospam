@@ -2,6 +2,7 @@ import { db, runInTx } from './db.js';
 import { deleteRaw, deleteAttachmentFile } from './storage.js';
 import { config } from './config.js';
 import { bus } from './events.js';
+import { pruneOutboundEvents } from './forwarding.js';
 
 const findExpired = db.prepare(`
   SELECT id, mailbox_id, raw_path FROM messages
@@ -15,6 +16,7 @@ const deleteMsg = db.prepare('DELETE FROM messages WHERE id = ?');
 export function startSweeper() {
   const tick = () => {
     const now = Date.now();
+    pruneOutboundEvents(now);
     const expired = findExpired.all(now) as { id: string; mailbox_id: number; raw_path: string }[];
     if (expired.length === 0) return;
 

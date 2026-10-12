@@ -254,6 +254,42 @@ CREATE TABLE IF NOT EXISTS connections (
   created_at           INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_connections_due ON connections(status, last_polled_at);
+
+-- Alias forwarding (docs/superpowers/specs/2026-10-12-alias-forwarding-design.md).
+-- External addresses an account may forward alias mail to. Must be verified first.
+CREATE TABLE IF NOT EXISTS forward_targets (
+  id                INTEGER PRIMARY KEY,
+  account_id        INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  email             TEXT NOT NULL,
+  verified_at       INTEGER,
+  verify_token_hash TEXT,
+  verify_expires_at INTEGER,
+  created_at        INTEGER NOT NULL,
+  UNIQUE(account_id, email)
+);
+CREATE INDEX IF NOT EXISTS idx_forward_targets_token ON forward_targets(verify_token_hash);
+
+-- One reverse address per (alias, external contact). Forwarded mail is From/Reply-To
+-- this address; replies sent to it are relayed back out as the alias.
+CREATE TABLE IF NOT EXISTS reverse_aliases (
+  id               INTEGER PRIMARY KEY,
+  alias_id         INTEGER NOT NULL REFERENCES aliases(id) ON DELETE CASCADE,
+  contact_address  TEXT NOT NULL,
+  contact_name     TEXT,
+  address          TEXT UNIQUE NOT NULL,
+  created_at       INTEGER NOT NULL,
+  last_used_at     INTEGER,
+  UNIQUE(alias_id, contact_address)
+);
+
+-- Rolling counter for per-account forward/reply rate limits. Pruned by the sweeper.
+CREATE TABLE IF NOT EXISTS outbound_events (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id  INTEGER NOT NULL,
+  kind        TEXT NOT NULL CHECK(kind IN ('forward','reply')),
+  at          INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_outbound_events ON outbound_events(account_id, kind, at);
 `;
 
 db.exec(SCHEMA);
@@ -308,6 +344,23 @@ if (!messageCols.has('tracker_details')) {
 }
 if (!messageCols.has('delivered_to_alias')) {
   db.exec('ALTER TABLE messages ADD COLUMN delivered_to_alias TEXT');
+}
+const aliasCols = colsOf('aliases');
+if (!aliasCols.has('mode')) {
+  db.exec(
+    "ALTER TABLE aliases ADD COLUMN mode TEXT NOT NULL DEFAULT 'store' CHECK(mode IN ('store','forward','both'))",
+  );
+}
+if (!aliasCols.has('forward_target_id')) {
+  db.exec(
+    'ALTER TABLE aliases ADD COLUMN forward_target_id INTEGER REFERENCES forward_targets(id) ON DELETE SET NULL',
+  );
+}
+if (!aliasCols.has('forwarded_count')) {
+  db.exec('ALTER TABLE aliases ADD COLUMN forwarded_count INTEGER NOT NULL DEFAULT 0');
+}
+if (!aliasCols.has('replied_count')) {
+  db.exec('ALTER TABLE aliases ADD COLUMN replied_count INTEGER NOT NULL DEFAULT 0');
 }
 const domainCols = colsOf('domains');
 if (!domainCols.has('dkim_selector')) {
@@ -521,6 +574,32 @@ export type Alias = {
   received_count: number;
   last_seen: number | null;
   created_at: number;
+  mode: AliasMode;
+  forward_target_id: number | null;
+  forwarded_count: number;
+  replied_count: number;
+};
+
+export type AliasMode = 'store' | 'forward' | 'both';
+
+export type ForwardTarget = {
+  id: number;
+  account_id: number;
+  email: string;
+  verified_at: number | null;
+  verify_token_hash: string | null;
+  verify_expires_at: number | null;
+  created_at: number;
+};
+
+export type ReverseAlias = {
+  id: number;
+  alias_id: number;
+  contact_address: string;
+  contact_name: string | null;
+  address: string;
+  created_at: number;
+  last_used_at: number | null;
 };
 
 export type Draft = {
