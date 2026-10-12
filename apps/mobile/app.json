@@ -12,7 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#FBF8F1",
       "dark": {
-        "image": "./assets/splash-icon.png",
+        "image": "./assets/splash-icon-dark.png",
         "backgroundColor": "#0E0E0C"
       }
     },
@@ -42,7 +42,15 @@
     "plugins": [
       "expo-secure-store",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0A0A0A",
+          "defaultChannel": "mail"
+        }
+      ]
     ],
     "extra": {},
     "scheme": "zerospam"

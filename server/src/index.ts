@@ -6,6 +6,7 @@ import { startConnectionPoller } from './connection-poller.js';
 import { closeAll, type Closer } from './shutdown.js';
 import { config, assertBillingConfig } from './config.js';
 import { startPendingTrials, startBillingTicker } from './billing.js';
+import { startPush } from './push.js';
 
 async function main() {
   assertBillingConfig(config.billing, config.publicBaseUrl);
@@ -20,6 +21,7 @@ async function main() {
   startDigester();
   startConnectionPoller();
   startBillingTicker();
+  startPush();
 
   const closers: Closer[] = [
     { name: 'smtp', close: () => new Promise<void>((res) => smtp.close(() => res())) },

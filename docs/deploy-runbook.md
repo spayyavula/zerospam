@@ -141,5 +141,17 @@ clock runs until you turn it on. Design: `docs/superpowers/specs/2026-10-12-stri
 5. **Verify** with a test-mode key on staging first: sign up, choose a plan with card
    `4242 4242 4242 4242`, and confirm **More → Billing** opens the Customer Portal.
 
+## Turning on mobile push notifications
+The Android app gets new-mail notifications through Expo's push service. The server only
+needs outbound HTTPS to `exp.host`. Setting up the app side (Firebase and the FCM key on Expo)
+is covered in `docs/android-release.md`.
+
+1. (Optional) If **Enhanced push security** is on in the Expo project, create an access token
+   in Expo → Account settings → Access tokens and store it:
+   `aws ssm put-parameter --type SecureString --name /zerospam/prod/EXPO_ACCESS_TOKEN --value "…"`
+2. `aws ssm put-parameter --type String --name /zerospam/prod/PUSH_ENABLED --value "true"`
+3. Redeploy (Phase 4). Only Inbox deliveries notify, and only for accounts with an active
+   trial or plan. To turn it off, set `PUSH_ENABLED` to `false` and redeploy.
+
 ## Rollback
 `terraform destroy` (data persists in EBS snapshots) or point DNS away.

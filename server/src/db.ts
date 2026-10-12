@@ -388,6 +388,12 @@ for (const [col, ddl] of [
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_accounts_stripe_customer ON accounts(stripe_customer_id)');
 
+// Push notifications for the mobile app (docs/android-app-spec.md §4.1).
+const deviceCols = colsOf('devices');
+if (!deviceCols.has('push_preview')) {
+  db.exec('ALTER TABLE devices ADD COLUMN push_preview INTEGER NOT NULL DEFAULT 1');
+}
+
 const domainCols = colsOf('domains');
 if (!domainCols.has('dkim_selector')) {
   db.exec('ALTER TABLE domains ADD COLUMN dkim_selector TEXT');
@@ -701,6 +707,8 @@ export type Device = {
   name: string;
   token_hash: string;
   expo_push_token: string | null;
+  /** 1 = show sender and subject in notifications; 0 = generic text. */
+  push_preview: number;
   platform: string | null;
   app_version: string | null;
   created_at: number;

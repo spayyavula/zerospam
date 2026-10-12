@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList, MainTabParamList } from './types';
 import { useCounts, useMailboxes } from '../hooks/useApi';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useMailboxStore } from '../stores/mailboxStore';
 import { useTheme } from '../theme/ThemeProvider';
 import { fonts } from '../theme/tokens';
@@ -78,6 +79,7 @@ function Tabs() {
 
 export default function MainNavigator() {
   useMailboxes();
+  usePushNotifications();
   const header = useHeaderOptions();
   return (
     <Stack.Navigator screenOptions={header}>

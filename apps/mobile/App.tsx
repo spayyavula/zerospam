@@ -1,5 +1,6 @@
-import React, { useMemo, useRef } from 'react';
-import { DarkTheme, DefaultTheme, NavigationContainer, type NavigationContainerRef } from '@react-navigation/native';
+import React, { useMemo } from 'react';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './src/navigation/navigationRef';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -42,8 +43,7 @@ const queryClient = new QueryClient({
 
 function ThemedApp() {
   const { colors, scheme } = useTheme();
-  const navRef = useRef<NavigationContainerRef<ReactNavigation.RootParamList>>(null);
-  const onStateChange = useNavigationTracking(navRef);
+  const onStateChange = useNavigationTracking(navigationRef);
 
   const navTheme = useMemo(() => {
     const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -62,7 +62,7 @@ function ThemedApp() {
   }, [scheme, colors]);
 
   return (
-    <NavigationContainer ref={navRef} theme={navTheme} onStateChange={onStateChange}>
+    <NavigationContainer ref={navigationRef} theme={navTheme} onStateChange={onStateChange}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <RootNavigator />
       <ToastHost />

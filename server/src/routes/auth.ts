@@ -18,6 +18,7 @@ import { getOrCreateSystemMailboxId } from '../system-mailbox.js';
 import { renderVerifyEmailHtml, renderVerifyEmailText } from '../verify-email-template.js';
 import { sendMessage } from '../sender.js';
 import { requireAuth } from '../requireAuth.js';
+import { EXPO_TOKEN_RE } from '../push.js';
 
 async function dispatchVerificationEmail(app: FastifyInstance, userId: number, recipientEmail: string): Promise<void> {
   const mailboxId = getOrCreateSystemMailboxId();
@@ -268,10 +269,46 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { token: rawToken };
   });
 
+  // Push notification settings for the calling device (Bearer token only — a browser
+  // session has no device row). token=null turns notifications off for this phone.
+  const pushSchema = z.object({
+    token: z.string().regex(EXPO_TOKEN_RE).nullable(),
+    showPreview: z.boolean().optional(),
+  });
+
+  app.put('/api/auth/devices/me/push', { preHandler: requireAuth }, async (req, reply) => {
+    const deviceId = req.device?.id;
+    if (deviceId == null) return reply.code(400).send({ error: 'device token required' });
+    const parsed = pushSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(422).send({ error: 'invalid-body' });
+    const { token, showPreview } = parsed.data;
+    // A push token belongs to one install; if another device row holds it (e.g. the user
+    // signed out and back in), move it here so the phone isn't notified twice.
+    if (token) db.prepare('UPDATE devices SET expo_push_token = NULL WHERE expo_push_token = ? AND id != ?').run(token, deviceId);
+    db.prepare('UPDATE devices SET expo_push_token = ? WHERE id = ?').run(token, deviceId);
+    if (showPreview !== undefined) {
+      db.prepare('UPDATE devices SET push_preview = ? WHERE id = ?').run(showPreview ? 1 : 0, deviceId);
+    }
+    return getPushSettings(deviceId);
+  });
+
+  app.get('/api/auth/devices/me/push', { preHandler: requireAuth }, async (req, reply) => {
+    const deviceId = req.device?.id;
+    if (deviceId == null) return reply.code(400).send({ error: 'device token required' });
+    return getPushSettings(deviceId);
+  });
+
+  function getPushSettings(deviceId: number) {
+    const row = db.prepare('SELECT expo_push_token, push_preview FROM devices WHERE id = ?').get(deviceId) as
+      | { expo_push_token: string | null; push_preview: number }
+      | undefined;
+    return { enabled: !!row?.expo_push_token, showPreview: row?.push_preview !== 0 };
+  }
+
   app.delete('/api/auth/devices/me', { preHandler: requireAuth }, async (req) => {
     const deviceId = req.device?.id;
     if (deviceId != null) {
-      db.prepare('UPDATE devices SET revoked_at = ? WHERE id = ?').run(Date.now(), deviceId);
+      db.prepare('UPDATE devices SET revoked_at = ?, expo_push_token = NULL WHERE id = ?').run(Date.now(), deviceId);
       recordAudit({ event: 'device.revoke', userId: req.user!.id, ip: req.ip, userAgent: (req.headers['user-agent'] as string) ?? null });
     }
     return { ok: true };
