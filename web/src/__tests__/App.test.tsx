@@ -29,7 +29,7 @@ describe('App (smoke)', () => {
     vi.mocked(api.authMe).mockRejectedValue(new Error('unauthorized'));
     render(<App />);
     expect(
-      (await screen.findAllByRole('button', { name: /create .*free account/i }))[0],
+      (await screen.findAllByRole('button', { name: /start free trial/i }))[0],
     ).toBeInTheDocument();
   });
 
@@ -37,7 +37,7 @@ describe('App (smoke)', () => {
     vi.mocked(api.authMe).mockRejectedValue(new Error('unauthorized'));
     render(<App />);
     const getStarted = (
-      await screen.findAllByRole('button', { name: /create .*free account/i })
+      await screen.findAllByRole('button', { name: /start free trial/i })
     )[0];
     fireEvent.click(getStarted);
     expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('App (smoke)', () => {
     vi.mocked(api.mailboxes).mockResolvedValue([{ id: 7, address: 'me@zero-spam.email' }] as any);
     render(<App />);
     // Not signed in yet: nothing mailbox-scoped is fetched.
-    fireEvent.click((await screen.findAllByRole('button', { name: /create .*free account/i }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: /start free trial/i }))[0]);
     expect(api.mailboxes).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByPlaceholderText('me@local'), { target: { value: 'a@x.com' } });
