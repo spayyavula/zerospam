@@ -4,6 +4,7 @@
 import { Wordmark } from './brand';
 import DayNightSwitch from './landing/DayNightSwitch';
 import { InboxPeek, AliasFlow, AliasModes, DigestCard, PRIVACY_POINTS } from './landing/LandingVisuals';
+import { Pricing, PRICING } from './landing/Pricing';
 
 // Text that sits on the yellow signal fill must stay dark in both themes.
 const ON_SIGNAL = 'text-[#14120B]';
@@ -53,6 +54,7 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
             <a href="#aliases" className="hover:text-ink transition-colors">Aliases</a>
             <a href="#quarantine" className="hover:text-ink transition-colors">Quarantine</a>
             <a href="#privacy" className="hover:text-ink transition-colors">Privacy</a>
+            <a href="#pricing" className="hover:text-ink transition-colors">Pricing</a>
           </div>
           <DayNightSwitch />
           <button
@@ -79,8 +81,10 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
               expires.
             </p>
             <div className="zs-rise zs-rise-3 mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <PrimaryButton onClick={onGetStarted}>Create free account</PrimaryButton>
-              <span className="text-[14px] text-quiet">Free. No credit card. About two minutes to set up.</span>
+              <PrimaryButton onClick={onGetStarted}>Start free trial</PrimaryButton>
+              <span className="text-[14px] text-quiet">
+                Free for {PRICING.trialMonths} months. No credit card to start.
+              </span>
             </div>
           </div>
           <div className={`${WRAP} zs-rise zs-rise-4 mt-[clamp(48px,7vw,88px)]`}>
@@ -153,15 +157,30 @@ export default function Landing({ onGetStarted }: { onGetStarted: () => void }) 
           </div>
         </section>
 
+        {/* Pricing */}
+        <section id="pricing" className="py-[clamp(72px,10vw,136px)] scroll-mt-14">
+          <div className={WRAP}>
+            <SectionHeading center>Three months free. Then one simple price.</SectionHeading>
+            <p className="mx-auto mt-6 max-w-[44ch] text-center text-[17px] leading-[1.6]">
+              Try everything for {PRICING.trialMonths} months, no credit card needed. Afterwards, pick monthly or
+              save with a year.
+            </p>
+            <div className="mt-[clamp(40px,6vw,72px)]">
+              <Pricing onStartTrial={onGetStarted} />
+            </div>
+          </div>
+        </section>
+
         {/* Closing call to action */}
-        <section className="py-[clamp(88px,12vw,160px)]">
+        <section className="bg-paper-deep py-[clamp(88px,12vw,160px)]">
           <div className={`${WRAP} text-center`}>
             <SectionHeading center>Start with a quiet inbox.</SectionHeading>
             <p className="mx-auto mt-6 max-w-[40ch] text-[17px] leading-[1.6]">
-              Pick a username, approve the people you know, and let the rest wait.
+              Pick a username, approve the people you know, and let the rest wait. The first{' '}
+              {PRICING.trialMonths} months are on us.
             </p>
             <div className="mt-9">
-              <PrimaryButton onClick={onGetStarted}>Create free account</PrimaryButton>
+              <PrimaryButton onClick={onGetStarted}>Start free trial</PrimaryButton>
             </div>
           </div>
         </section>

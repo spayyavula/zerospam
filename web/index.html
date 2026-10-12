@@ -9,7 +9,7 @@
     <title>ZeroSpam — Whitelist Email That Blocks Spam Before Your Inbox</title>
     <meta
       name="description"
-      content="ZeroSpam is a whitelist-first email screening service. Only senders you approve reach your inbox; unknown senders wait in a Screener. Block spam before it arrives — free, no credit card."
+      content="ZeroSpam is a whitelist-first email screening service. Only senders you approve reach your inbox; unknown senders wait in a Screener. Block spam before it arrives. Free for 3 months, then $19.99/month or $100/year."
     />
     <link rel="canonical" href="https://zero-spam.email/" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
@@ -57,11 +57,22 @@
             "url": "https://zero-spam.email/",
             "description": "Whitelist-first email screening service. Only senders you approve reach your inbox; unknown senders wait in a Screener until you decide.",
             "publisher": { "@id": "https://zero-spam.email/#org" },
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            }
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Monthly",
+                "price": "19.99",
+                "priceCurrency": "USD",
+                "description": "3-month free trial, then $19.99 per month."
+              },
+              {
+                "@type": "Offer",
+                "name": "Annual",
+                "price": "100.00",
+                "priceCurrency": "USD",
+                "description": "3-month free trial, then $100 per year."
+              }
+            ]
           },
           {
             "@type": "FAQPage",
@@ -84,10 +95,10 @@
               },
               {
                 "@type": "Question",
-                "name": "Is ZeroSpam free?",
+                "name": "How much does ZeroSpam cost?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "You can create a free ZeroSpam account with no credit card required and cancel anytime."
+                  "text": "Every account starts with a 3-month free trial, no credit card required to start. After the trial, ZeroSpam is $19.99 per month or $100 per year."
                 }
               }
             ]
