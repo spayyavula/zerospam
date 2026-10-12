@@ -42,9 +42,11 @@ TRUST_PROXY, SEND_MODE, RELAY_HOST, RELAY_PORT, RELAY_SECURE, TLS_CERT_PATH,
 TLS_KEY_PATH) as `String` parameters under the same `/zerospam/prod/` prefix.
 `entrypoint.sh` renders every parameter under the prefix, so adding one is enough.
 
-> **Required:** set `TRUST_PROXY=1`. The app sits behind Caddy on the docker
-> network, so without it `req.ip` resolves to Caddy's container IP and the
-> rate-limiter buckets all clients together (and audit logs lose the real IP).
+> **Required:** set `TRUST_PROXY=loopback,uniquelocal`. The app sits behind Caddy on
+> the docker network, so without it `req.ip` resolves to Caddy's container IP and the
+> rate-limiter buckets all clients together (and audit logs lose the real IP). Don't use
+> a hop count such as `1`: Fastify ≥5.12 ignores numeric values (they can be spoofed),
+> and the app only translates them to the value above as a stopgap, with a warning.
 > `SESSION_IDLE_TTL_DAYS` (30) and `SESSION_ABSOLUTE_TTL_DAYS` (90) are optional
 > overrides for the session idle window and absolute cap.
 
@@ -77,6 +79,38 @@ TLS_KEY_PATH) as `String` parameters under the same `/zerospam/prod/` prefix.
   `openssl s_client -starttls smtp -connect <eip>:25`.
 - Outbound: sign up a new user; confirm the verification email arrives at an external inbox
   with SPF/DKIM/DMARC = pass (Gmail "Show original"); run a mail-tester.com check.
+
+## Enabling alias forwarding (after PR #13)
+Forwarding ships disabled by default: every existing alias stays in `store` mode until a
+user picks a forwarding mode. To make it usable in production:
+
+1. **SES out of the sandbox.** Check `aws sesv2 get-account --region us-east-1`
+   → `ProductionAccessEnabled: true`. If false, request it (console: SES → Account
+   dashboard → *Request production access*, or `aws sesv2 put-account-details` with a
+   mail-type, website URL and use-case description). In the sandbox, forwards to an
+   unverified Gmail address are rejected by SES; ZeroSpam then stores the message
+   instead (`forward-skipped:relay-error`), so nothing is lost while waiting.
+2. **Update `TRUST_PROXY`.** This release upgrades Fastify, which ignores hop counts:
+   ```
+   aws ssm put-parameter --overwrite --type String --name /zerospam/prod/TRUST_PROXY --value "loopback,uniquelocal"
+   ```
+3. **Optional limits** (defaults shown in `server/.env.production.example`): add any of
+   `ALIAS_MAX_PER_ACCOUNT`, `FORWARD_TARGETS_MAX_PER_ACCOUNT`, `ALIAS_FORWARD_MAX_PER_HOUR`,
+   `ALIAS_REPLY_MAX_PER_HOUR` as `String` params. Keep `ALIAS_REPLY_REQUIRE_DMARC` unset
+   (defaults to `true`).
+4. **Deploy** (Phase 4 commands): `git pull`, re-render `app.env`, `docker compose up -d --build`.
+   Schema changes are additive and run automatically on boot.
+5. **Smoke test.**
+   - In webmail → Aliases, add your Gmail address as a forwarding address and confirm
+     the link.
+   - Create an alias in *Forward only* mode. Whitelist a second external address of
+     yours and send to the alias from it.
+   - In Gmail, open *Show original* on the forwarded copy: DKIM = PASS
+     (`d=zero-spam.email`), DMARC = PASS, and From is an `rv.…@zero-spam.email` address.
+   - Reply from Gmail. On the sender's side the reply must come From the alias, with
+     no Gmail address in any header.
+   - Check `docker compose logs app | grep -E "forward|reply"` for `[forward] failed`
+     or `alias.reply.rejected` entries.
 
 ## Rollback
 `terraform destroy` (data persists in EBS snapshots) or point DNS away.
