@@ -26,7 +26,10 @@ export default {
         'signal-ink': 'var(--signal-ink)',
       },
       fontFamily: {
-        display: ['Source Serif 4 Variable', 'Source Serif 4', 'Iowan Old Style', 'Georgia', 'serif'],
+        // Quoted: Tailwind emits family names verbatim, and an unquoted name containing a
+        // token that starts with a digit ("Source Serif 4") is invalid CSS, so the browser
+        // would drop the whole font-family declaration and fall back to sans.
+        display: ['"Source Serif 4 Variable"', '"Source Serif 4"', '"Iowan Old Style"', 'Georgia', 'serif'],
         body: ['Geist Variable', 'Geist', 'Helvetica Neue', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono Variable', 'JetBrains Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
