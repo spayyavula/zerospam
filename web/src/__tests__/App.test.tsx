@@ -8,6 +8,10 @@ vi.mock('../api', () => ({
     authMe: vi.fn(),
     authLogin: vi.fn(),
     mailboxes: vi.fn(),
+    billing: vi.fn(() =>
+      Promise.resolve({ enabled: false, entitled: true, exempt: false, subscribed: false, status: null, plan: null,
+        trialEndsAt: null, trialDaysLeft: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, hasBillingAccount: false }),
+    ),
     // Read calls the shell makes once a mailbox is active.
     list: vi.fn(() => Promise.resolve([])),
     listDrafts: vi.fn(() => Promise.resolve([])),
@@ -76,5 +80,21 @@ describe('App (smoke)', () => {
     render(<App />);
     expect(await screen.findByText('ZeroSpam')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Compose/ })).toBeInTheDocument();
+  });
+});
+
+describe('App billing', () => {
+  it('shows the paywall instead of webmail when the trial has ended unpaid', async () => {
+    vi.mocked(api.authMe).mockResolvedValue({
+      user: { id: 1, email: 'pat@example.com', totp_enabled: false, tour_completed_at: 1700000000000 },
+    } as any);
+    vi.mocked(api.mailboxes).mockResolvedValue([]);
+    vi.mocked((api as any).billing).mockResolvedValue({
+      enabled: true, entitled: false, exempt: false, subscribed: false, status: null, plan: null,
+      trialEndsAt: 1, trialDaysLeft: 0, currentPeriodEnd: null, cancelAtPeriodEnd: false, hasBillingAccount: false,
+    });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: /free trial has ended/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /compose/i })).toBeNull();
   });
 });

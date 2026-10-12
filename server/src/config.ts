@@ -178,7 +178,35 @@ export const config = {
     replyRequireDmarc: (process.env.ALIAS_REPLY_REQUIRE_DMARC ?? 'true').toLowerCase() !== 'false',
     verifyTokenExpiryHours: envInt('FORWARD_VERIFY_EXPIRY_HOURS', 24),
   },
+  // Stripe billing. Ships disabled: while off, everyone is entitled and no trial clock
+  // runs. See docs/superpowers/specs/2026-10-12-stripe-billing-design.md.
+  billing: {
+    enabled: (process.env.BILLING_ENABLED ?? 'false').toLowerCase() === 'true',
+    trialMonths: envInt('BILLING_TRIAL_MONTHS', 3),
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+    priceMonthly: process.env.STRIPE_PRICE_MONTHLY ?? '',
+    priceAnnual: process.env.STRIPE_PRICE_ANNUAL ?? '',
+    reminderTickSec: envInt('BILLING_TICK_INTERVAL_SEC', 3600),
+  },
 } as const;
+
+/** Fail fast at boot if billing is switched on without its Stripe configuration. */
+export function assertBillingConfig(b: { enabled: boolean; stripeSecretKey: string; stripeWebhookSecret: string; priceMonthly: string; priceAnnual: string }, publicBaseUrl: string): void {
+  if (!b.enabled) return;
+  const missing = [
+    ['STRIPE_SECRET_KEY', b.stripeSecretKey],
+    ['STRIPE_WEBHOOK_SECRET', b.stripeWebhookSecret],
+    ['STRIPE_PRICE_MONTHLY', b.priceMonthly],
+    ['STRIPE_PRICE_ANNUAL', b.priceAnnual],
+    ['PUBLIC_BASE_URL', publicBaseUrl],
+  ]
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  if (missing.length) {
+    throw new Error(`BILLING_ENABLED=true but missing: ${missing.join(', ')}`);
+  }
+}
 
 export type Config = typeof config;
 

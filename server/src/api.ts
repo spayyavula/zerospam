@@ -38,6 +38,8 @@ import { outlookOAuthRoutes } from './routes/oauth-outlook.js';
 import { connectionsRoutes } from './routes/connections.js';
 import { renderPrivacyPolicyPage, renderTermsOfServicePage } from './legal-pages.js';
 import { requireAuth } from './requireAuth.js';
+import { billingRoutes } from './routes/billing.js';
+import { isAccountEntitled } from './billing.js';
 import { SESSION_COOKIE_NAME } from './sessions.js';
 import { getScreenerCounts } from './screener.js';
 import { registerOpenApi } from './openapi/register.js';
@@ -224,6 +226,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
 
   await registerOpenApi(app);
 
+  // Reachable while paywalled: sign-in/out and device pairing, billing, the user's own
+  // profile flags, and health.
+  const PAYWALL_OPEN_PREFIXES = ['/api/auth/', '/api/billing', '/api/users/me', '/api/health'];
+
   // Public routes (no auth) — health check + login/logout
   const PUBLIC_PREFIXES = [
     '/api/health',
@@ -233,6 +239,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/auth/verify',
     '/public/digest/allow',
     '/public/forward/verify',
+    '/api/stripe/webhook',
     '/api/oauth/gmail/callback',
     '/api/oauth/outlook/callback',
     '/openapi.json',
@@ -280,9 +287,22 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       }
     }
     await requireAuth(req as any, reply as any);
+    if (reply.sent) return;
+    // Billing paywall (spec §5): an unpaid account can still sign in, see its billing
+    // state, and subscribe, but webmail routes answer 402. Inbound mail is unaffected.
+    const accountId = (req as any).account?.id;
+    if (
+      accountId != null &&
+      req.url.startsWith('/api/') &&
+      !PAYWALL_OPEN_PREFIXES.some((p) => req.url === p || req.url.startsWith(p)) &&
+      !isAccountEntitled(accountId)
+    ) {
+      reply.code(402).send({ error: 'subscription_required' });
+    }
   });
 
   await app.register(authRoutes);
+  await app.register(billingRoutes);
   await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
   await app.register(gmailOAuthRoutes);

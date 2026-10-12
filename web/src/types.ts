@@ -2,6 +2,9 @@ import type { FolderName } from '@zerospam/shared-api';
 
 export type {
   Alias,
+  BillingPlan,
+  BillingSummary,
+  BillingRedirect,
   AliasMode,
   AliasUsage,
   ForwardTarget,

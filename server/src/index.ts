@@ -4,13 +4,22 @@ import { startSweeper } from './sweeper.js';
 import { startDigester } from './digester.js';
 import { startConnectionPoller } from './connection-poller.js';
 import { closeAll, type Closer } from './shutdown.js';
+import { config, assertBillingConfig } from './config.js';
+import { startPendingTrials, startBillingTicker } from './billing.js';
 
 async function main() {
+  assertBillingConfig(config.billing, config.publicBaseUrl);
+  if (config.billing.enabled) {
+    const started = startPendingTrials();
+    // eslint-disable-next-line no-console
+    if (started) console.log(`[billing] started the free trial for ${started} existing account(s)`);
+  }
   const smtp = startSmtp();
   const app = await startApi();
   startSweeper();
   startDigester();
   startConnectionPoller();
+  startBillingTicker();
 
   const closers: Closer[] = [
     { name: 'smtp', close: () => new Promise<void>((res) => smtp.close(() => res())) },

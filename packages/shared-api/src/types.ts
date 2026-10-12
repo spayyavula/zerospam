@@ -372,3 +372,23 @@ export type DeviceRegisterRequest = {
 export type DeviceRegisterResponse = {
   token: string;
 };
+
+// ---- billing ----
+export type BillingPlan = 'monthly' | 'annual';
+
+/** GET /api/billing — see docs/superpowers/specs/2026-10-12-stripe-billing-design.md §6. */
+export type BillingSummary = {
+  enabled: boolean;
+  entitled: boolean;
+  exempt: boolean;
+  subscribed: boolean;
+  status: string | null;
+  plan: BillingPlan | null;
+  trialEndsAt: number | null;
+  trialDaysLeft: number | null;
+  currentPeriodEnd: number | null;
+  cancelAtPeriodEnd: boolean;
+  hasBillingAccount: boolean;
+};
+
+export type BillingRedirect = { url: string };
