@@ -245,9 +245,16 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   const csrfAllowedOrigins = new Set(
     [...config.allowedOrigins, config.publicBaseUrl].filter(Boolean),
   );
+  // Token-authenticated public routes (digest actions, forwarding-address confirmation).
+  // They never read the session cookie — the one-time token in the link is the whole
+  // authorization — so a cookie-based CSRF check protects nothing there. Exempting them
+  // matters in practice: helmet's Referrer-Policy: no-referrer makes browsers submit their
+  // confirm forms with `Origin: null`, which the guard below would reject whenever the
+  // user also happens to be logged in to webmail in the same browser.
+  const TOKEN_AUTH_PREFIX = '/public/';
   app.addHook('preHandler', async (req, reply) => {
     const method = req.method;
-    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS' && !req.url.startsWith(TOKEN_AUTH_PREFIX)) {
       const cookies = (req as any).cookies as Record<string, string> | undefined;
       const origin = req.headers.origin as string | undefined;
       if (cookies?.[SESSION_COOKIE_NAME] && origin && !csrfAllowedOrigins.has(origin)) {
