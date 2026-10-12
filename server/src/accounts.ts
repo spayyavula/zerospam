@@ -1,4 +1,5 @@
 import { db, DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME, type Account } from './db.js';
+import { newAccountTrialEnd } from './billing.js';
 
 export function ensureDefaultAccount(): void {
   const row = db.prepare('SELECT id FROM accounts WHERE id = ?').get(DEFAULT_ACCOUNT_ID);
@@ -9,11 +10,15 @@ export function ensureDefaultAccount(): void {
 }
 
 export function createAccount(name: string, plan = 'free'): Account {
+  const now = Date.now();
+  // The free-trial clock starts at signup once billing is live (null while it's off;
+  // those accounts start their trial when billing launches).
   const r = db
     .prepare(
-      `INSERT INTO accounts (name, plan, created_at) VALUES (?, ?, ?) RETURNING id, name, plan, created_at`,
+      `INSERT INTO accounts (name, plan, created_at, trial_ends_at) VALUES (?, ?, ?, ?)
+       RETURNING id, name, plan, created_at`,
     )
-    .get(name, plan, Date.now()) as Account;
+    .get(name, plan, now, newAccountTrialEnd(now)) as Account;
   return r;
 }
 

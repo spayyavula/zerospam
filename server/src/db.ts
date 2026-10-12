@@ -290,6 +290,13 @@ CREATE TABLE IF NOT EXISTS outbound_events (
   at          INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_outbound_events ON outbound_events(account_id, kind, at);
+
+-- Stripe webhook idempotency: an event id is processed at most once.
+CREATE TABLE IF NOT EXISTS stripe_events (
+  id           TEXT PRIMARY KEY,
+  type         TEXT NOT NULL,
+  received_at  INTEGER NOT NULL
+);
 `;
 
 db.exec(SCHEMA);
@@ -362,6 +369,25 @@ if (!aliasCols.has('forwarded_count')) {
 if (!aliasCols.has('replied_count')) {
   db.exec('ALTER TABLE aliases ADD COLUMN replied_count INTEGER NOT NULL DEFAULT 0');
 }
+// Billing (docs/superpowers/specs/2026-10-12-stripe-billing-design.md §4).
+const accountCols = colsOf('accounts');
+for (const [col, ddl] of [
+  ['trial_ends_at', 'INTEGER'],
+  ['billing_exempt', 'INTEGER NOT NULL DEFAULT 0'],
+  ['stripe_customer_id', 'TEXT'],
+  ['stripe_subscription_id', 'TEXT'],
+  ['subscription_status', 'TEXT'],
+  ['subscription_plan', 'TEXT'],
+  ['current_period_end', 'INTEGER'],
+  ['cancel_at_period_end', 'INTEGER NOT NULL DEFAULT 0'],
+  ['trial_reminder_sent_at', 'INTEGER'],
+  ['trial_ended_notice_sent_at', 'INTEGER'],
+  ['subscription_updated_at', 'INTEGER'],
+] as const) {
+  if (!accountCols.has(col)) db.exec(`ALTER TABLE accounts ADD COLUMN ${col} ${ddl}`);
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_accounts_stripe_customer ON accounts(stripe_customer_id)');
+
 const domainCols = colsOf('domains');
 if (!domainCols.has('dkim_selector')) {
   db.exec('ALTER TABLE domains ADD COLUMN dkim_selector TEXT');
@@ -393,6 +419,11 @@ if (!defaultAccount) {
     'INSERT INTO accounts (id, name, plan, created_at) VALUES (?, ?, ?, ?)',
   ).run(DEFAULT_ACCOUNT_ID, DEFAULT_ACCOUNT_NAME, 'free', Date.now());
 }
+// The system (noreply) account and the operator's own default account are never billed.
+db.prepare('UPDATE accounts SET billing_exempt = 1 WHERE id IN (?, ?) AND billing_exempt = 0').run(
+  SYSTEM_ACCOUNT_ID,
+  DEFAULT_ACCOUNT_ID,
+);
 
 // SQLite ALTER TABLE does NOT accept bound parameters, so DEFAULT-clause
 // values for the new account_id column must be interpolated. The values are
@@ -495,6 +526,20 @@ export type Account = {
   name: string;
   plan: string;
   created_at: number;
+};
+
+export type AccountBilling = {
+  id: number;
+  trial_ends_at: number | null;
+  billing_exempt: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string | null;
+  subscription_plan: 'monthly' | 'annual' | null;
+  current_period_end: number | null;
+  cancel_at_period_end: number;
+  trial_reminder_sent_at: number | null;
+  trial_ended_notice_sent_at: number | null;
 };
 
 export type Domain = {

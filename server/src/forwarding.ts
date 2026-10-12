@@ -17,6 +17,7 @@ import { buildTransport, sendMessage } from './sender.js';
 import { ensureDkim } from './dkim.js';
 import { checkAuth } from './mailauth.js';
 import { recordAudit } from './audit.js';
+import { isAccountEntitled } from './billing.js';
 import { getOrCreateSystemMailboxId } from './system-mailbox.js';
 import {
   splitMessage,
@@ -376,6 +377,9 @@ export async function forwardAliasMessage(
     const { fields, body } = splitMessage(raw);
     if (hasHeader(fields, LOOP_HEADER)) return { ok: false, reason: 'loop' };
 
+    // Unpaid accounts keep receiving mail, but forwarding pauses: the message is stored
+    // in ZeroSpam instead (billing spec §5).
+    if (!isAccountEntitled(alias.account_id)) return { ok: false, reason: 'subscription-required' };
     const target = verifiedTargetFor(alias.account_id, alias.forward_target_id);
     if (!target) return { ok: false, reason: 'no-verified-target' };
     if (isRateLimited(alias.account_id, 'forward')) return { ok: false, reason: 'rate-limited' };

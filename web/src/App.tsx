@@ -30,6 +30,10 @@ import Screener from './components/Screener';
 import DomainExpandToast from './components/DomainExpandToast';
 import WelcomeTour from './components/WelcomeTour';
 import Landing from './components/Landing';
+import Paywall from './components/billing/Paywall';
+import PlanPicker from './components/billing/PlanPicker';
+import TrialBanner from './components/billing/TrialBanner';
+import type { BillingSummary } from './types';
 import { useShortcuts } from './hooks/useShortcuts';
 import { Settings, HelpCircle } from 'lucide-react';
 
@@ -92,12 +96,62 @@ export default function App() {
   const [tourOpen, setTourOpen] = useState(false);
   const [domainToast, setDomainToast] = useState<{ mailboxId: number; domain: string } | null>(null);
   const [showLanding, setShowLanding] = useState(true);
+  const [meEmail, setMeEmail] = useState<string | null>(null);
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
+  const [showPlans, setShowPlans] = useState(false);
+  const [billingNotice, setBillingNotice] = useState<string | null>(null);
 
   const loadAuthState = useCallback(async () => {
     const me = await api.authMe();
     setAuthed(true);
+    setMeEmail(me.user.email ?? null);
     setTourOpen(me.user.tour_completed_at == null);
   }, []);
+
+  const refreshBilling = useCallback(
+    () => api.billing().then((b) => (setBilling(b), b)).catch(() => null),
+    [],
+  );
+
+  // Billing state once signed in, plus the return trip from Stripe (?billing=...).
+  useEffect(() => {
+    if (!authed) return;
+    const params = new URLSearchParams(window.location.search);
+    const ret = params.get('billing');
+    if (ret) {
+      params.delete('billing');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash);
+    }
+    if (ret === 'choose') setShowPlans(true);
+    if (ret === 'success') {
+      // The webhook can land a moment after Stripe redirects back; poll briefly.
+      setBillingNotice('Payment received. Finishing setup…');
+      let tries = 0;
+      const poll = async () => {
+        const b = await refreshBilling();
+        if (b?.subscribed) setBillingNotice('You’re subscribed. Thank you.');
+        else if (++tries < 8) setTimeout(poll, 1500);
+        else setBillingNotice('Payment received. Your subscription will show here shortly.');
+      };
+      void poll();
+    } else {
+      void refreshBilling();
+    }
+  }, [authed, refreshBilling]);
+
+  const openBilling = useCallback(async () => {
+    if (billing?.subscribed && billing.hasBillingAccount) {
+      try {
+        const { url } = await api.billingPortal();
+        window.location.assign(url);
+      } catch {
+        setBillingNotice('Could not open billing settings. Try again.');
+      }
+    } else {
+      setShowPlans(true);
+    }
+  }, [billing]);
 
   const signOut = useCallback(async () => {
     try {
@@ -368,6 +422,10 @@ export default function App() {
     );
   }
 
+  if (billing?.enabled && !billing.entitled) {
+    return <Paywall email={meEmail} onSignOut={() => void signOut()} />;
+  }
+
   return (
     <div className="h-full flex flex-col bg-paper text-ink">
       <header className="h-12 px-4 border-b border-rule flex items-center gap-3 bg-paper">
@@ -421,7 +479,37 @@ export default function App() {
         </button>
       </header>
 
+      {billing && <TrialBanner billing={billing} onChoosePlan={() => setShowPlans(true)} />}
+      {billingNotice && (
+        <div role="status" className="flex items-center justify-center gap-3 px-4 py-2 border-b border-rule bg-paper-deep text-[14px] text-ink">
+          {billingNotice}
+          <button type="button" onClick={() => setBillingNotice(null)} className="text-quiet hover:text-ink" aria-label="Dismiss">
+            ×
+          </button>
+        </div>
+      )}
+      {showPlans && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowPlans(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose a plan"
+            className="w-full max-w-[680px] rounded-[18px] border border-rule bg-paper p-6 sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <h2 className="font-display italic text-[30px] leading-tight text-ink">Choose a plan</h2>
+              <button type="button" onClick={() => setShowPlans(false)} className="text-quiet hover:text-ink text-[20px]" aria-label="Close">
+                ×
+              </button>
+            </div>
+            <PlanPicker trialDaysLeft={billing?.trialDaysLeft ?? null} />
+          </div>
+        </div>
+      )}
+
       <Sidebar
+        onBilling={billing?.enabled && !billing.exempt ? () => void openBilling() : undefined}
         counts={counts}
         folder={folder}
         onFolder={(f) => {

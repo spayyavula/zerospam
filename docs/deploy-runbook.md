@@ -112,5 +112,34 @@ user picks a forwarding mode. To make it usable in production:
    - Check `docker compose logs app | grep -E "forward|reply"` for `[forward] failed`
      or `alias.reply.rejected` entries.
 
+## Turning on billing (Stripe)
+Billing ships switched off (`BILLING_ENABLED=false`). Nobody is charged and no trial
+clock runs until you turn it on. Design: `docs/superpowers/specs/2026-10-12-stripe-billing-design.md`.
+
+1. **In Stripe (test mode first):**
+   - Products → **Add product** "ZeroSpam" with two recurring USD prices:
+     **$19.99 / month** and **$100 / year**. Copy both Price IDs (`price_…`).
+   - Settings → Billing → **Customer portal**: enable plan switching between the two
+     prices, payment-method updates, cancellation, and invoice history.
+   - Developers → Webhooks → **Add endpoint** `https://zero-spam.email/api/stripe/webhook`
+     for `checkout.session.completed`, `customer.subscription.created`,
+     `customer.subscription.updated`, and `customer.subscription.deleted`. Copy the signing secret (`whsec_…`).
+2. **Store the configuration in SSM** (billing still off):
+   ```
+   aws ssm put-parameter --type SecureString --name /zerospam/prod/STRIPE_SECRET_KEY --value "sk_live_…"
+   aws ssm put-parameter --type SecureString --name /zerospam/prod/STRIPE_WEBHOOK_SECRET --value "whsec_…"
+   aws ssm put-parameter --type String --name /zerospam/prod/STRIPE_PRICE_MONTHLY --value "price_…"
+   aws ssm put-parameter --type String --name /zerospam/prod/STRIPE_PRICE_ANNUAL --value "price_…"
+   aws ssm put-parameter --type String --name /zerospam/prod/BILLING_ENABLED --value "false"
+   ```
+   Deploy (Phase 4). Nothing changes for users.
+3. **Update the Terms of Service** with billing terms (auto-renewal, cancellation, refunds).
+   They currently say the Service is free. This is required before charging anyone.
+4. **Go live:** set `BILLING_ENABLED` to `true` and redeploy. On boot, every existing account
+   starts its 3-month free trial (logged as `[billing] started the free trial for N account(s)`).
+   The operator account (id 1) and the system account are never billed.
+5. **Verify** with a test-mode key on staging first: sign up, choose a plan with card
+   `4242 4242 4242 4242`, and confirm **More → Billing** opens the Customer Portal.
+
 ## Rollback
 `terraform destroy` (data persists in EBS snapshots) or point DNS away.

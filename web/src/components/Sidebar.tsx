@@ -18,6 +18,8 @@ type Props = {
   onPurge: () => void;
   onDkim: () => void;
   onAliases: () => void;
+  /** Present only when billing applies to this account. */
+  onBilling?: () => void;
 };
 
 export default function Sidebar(p: Props) {
@@ -33,6 +35,7 @@ export default function Sidebar(p: Props) {
     ['DKIM / DNS', p.onDkim],
     ['Test injector', p.onInject],
     ['Purge quarantine', p.onPurge],
+    ...(p.onBilling ? ([['Billing', p.onBilling]] as [string, () => void][]) : []),
   ];
 
   return (

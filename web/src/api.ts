@@ -1,5 +1,8 @@
 import type {
   Alias,
+  BillingPlan,
+  BillingSummary,
+  BillingRedirect,
   AliasUsage,
   ForwardTarget,
   CreateForwardTargetResponse,
@@ -143,6 +146,12 @@ export const api = {
   patchAlias: (id: number, b: PatchAliasRequest) =>
     handle(client.patch<Alias>(`/api/aliases/${id}`, b)),
   aliasUsage: () => handle(client.get<AliasUsage>(`/api/aliases/usage`)),
+
+  // billing (Stripe-hosted Checkout and Customer Portal; we only receive redirect URLs)
+  billing: () => handle(client.get<BillingSummary>(`/api/billing`)),
+  billingCheckout: (plan: BillingPlan) =>
+    handle(client.post<BillingRedirect>(`/api/billing/checkout`, { plan })),
+  billingPortal: () => handle(client.post<BillingRedirect>(`/api/billing/portal`)),
 
   // forwarding addresses for aliases
   forwardTargets: () => handle(client.get<ForwardTarget[]>(`/api/forward-targets`)),
