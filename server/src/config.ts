@@ -71,15 +71,36 @@ export function parseAllowedOrigins(raw: string | undefined): string[] {
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
+// Trusted proxies when TRUST_PROXY is a legacy hop count: loopback plus the private
+// ranges Docker bridge networks use (10/8, 172.16/12, 192.168/16, fc00::/7).
+export const LEGACY_HOP_COUNT_TRUST = 'loopback,uniquelocal';
+
 // Coerce TRUST_PROXY into the shape Fastify/proxy-addr accepts.
-// 'true'/'false' → boolean; a bare integer → hop count; anything else
-// (named subnet like 'loopback', a CIDR, or a comma list) → passed through.
-export function parseTrustProxy(raw: string | undefined): boolean | number | string {
+// 'true'/'false' → boolean; anything else (named subnet like 'loopback' or
+// 'uniquelocal', a CIDR, or a comma list) → passed through.
+//
+// A bare integer used to mean "trust N hops". Fastify >=5.12 fails closed on numeric
+// trustProxy (a hop count can't validate the immediate peer, so clients could spoof
+// X-Forwarded-For), which would silently attribute every request to the proxy and
+// collapse all clients into one rate-limit bucket. Our only deployment puts the app
+// behind Caddy on a private Docker network with the API port unpublished, so a hop
+// count is translated to trusting loopback + private ranges, with a warning to set
+// the explicit value instead.
+export function parseTrustProxy(
+  raw: string | undefined,
+  warn: (msg: string) => void = (m) => console.warn(m),
+): boolean | string {
   if (raw === undefined || raw.trim() === '') return 'loopback';
   const v = raw.trim();
   if (v === 'true') return true;
   if (v === 'false') return false;
-  if (/^\d+$/.test(v)) return Number(v);
+  if (/^\d+$/.test(v)) {
+    warn(
+      `[config] TRUST_PROXY=${v} (hop count) is no longer supported by Fastify; ` +
+        `treating it as "${LEGACY_HOP_COUNT_TRUST}". Set TRUST_PROXY=${LEGACY_HOP_COUNT_TRUST} (or a CIDR) explicitly.`,
+    );
+    return LEGACY_HOP_COUNT_TRUST;
+  }
   return v;
 }
 
