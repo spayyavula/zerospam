@@ -50,7 +50,7 @@ export default function Signup({ onSwitchToLogin }: Props) {
           required
           minLength={3}
           maxLength={32}
-          pattern="[a-z0-9._-]+"
+          pattern="[a-z0-9._\-]+"
           className="mt-1 w-full bg-zsbg border border-zsborder rounded px-2 py-1.5 text-sm"
           placeholder="alice"
           value={username}
