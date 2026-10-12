@@ -101,6 +101,6 @@ export async function injectQuarantined(opts: {
   ];
   const raw = Buffer.from(headers.join('\r\n'));
   const r = await ingest(raw, opts.to);
-  if (!r) throw new Error(`ingest returned null for ${opts.to}`);
+  if (!r || !r.messageId) throw new Error(`ingest stored nothing for ${opts.to}`);
   return r.messageId;
 }

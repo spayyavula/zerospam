@@ -11,11 +11,16 @@ import { matchWhitelist } from './whitelist.js';
 import { checkAuth } from './mailauth.js';
 import { bus } from './events.js';
 import { scanTrackers } from './utils/trackers.js';
+import { forwardAliasMessage } from './forwarding.js';
+import type { ForwardableAlias } from './forwarding.js';
 
 export type IngestResult = {
   mailboxId: number;
-  messageId: string;
-  folder: 'inbox' | 'quarantine';
+  /** null when an alias in `forward` mode relayed the message without storing it. */
+  messageId: string | null;
+  folder: 'inbox' | 'quarantine' | 'forwarded';
+  /** True when the message was relayed to the alias's forwarding address. */
+  forwarded: boolean;
   whitelistMatch: string | null;
   reason: string;
   attachmentCount: number;
@@ -23,7 +28,7 @@ export type IngestResult = {
 
 const findMailbox = db.prepare('SELECT * FROM mailboxes WHERE address = ?');
 const findAlias = db.prepare(
-  `SELECT a.*, m.address AS mailbox_address
+  `SELECT a.*, m.address AS mailbox_address, m.account_id, m.domain_id
    FROM aliases a JOIN mailboxes m ON m.id = a.mailbox_id
    WHERE a.address = ?`,
 );
@@ -51,23 +56,26 @@ type RecipientResolution = {
   viaAlias: string | null;
   aliasId: number | null;
   abused: boolean;
+  alias: ForwardableAlias | null;
 };
 
 function resolveRecipient(rcpt: string): RecipientResolution | null {
   const addr = rcpt.toLowerCase();
   const mb = findMailbox.get(addr) as Mailbox | undefined;
-  if (mb) return { mailbox: mb, viaAlias: null, aliasId: null, abused: false };
+  if (mb) return { mailbox: mb, viaAlias: null, aliasId: null, abused: false, alias: null };
 
   const alias = findAlias.get(addr) as
-    | (import('./db.js').Alias & { mailbox_address: string })
+    | (import('./db.js').Alias & { mailbox_address: string; account_id: number; domain_id: number })
     | undefined;
   if (!alias) return null;
-  if (alias.abused) return { mailbox: null as any, viaAlias: addr, aliasId: alias.id, abused: true };
+  if (alias.abused) {
+    return { mailbox: null as any, viaAlias: addr, aliasId: alias.id, abused: true, alias: null };
+  }
   if (alias.expires_at && alias.expires_at < Date.now()) return null;
 
   const linkedMb = findMailbox.get(alias.mailbox_address) as Mailbox | undefined;
   if (!linkedMb) return null;
-  return { mailbox: linkedMb, viaAlias: addr, aliasId: alias.id, abused: false };
+  return { mailbox: linkedMb, viaAlias: addr, aliasId: alias.id, abused: false, alias };
 }
 const insertAttachment = db.prepare(`
   INSERT INTO attachments (message_id, filename, content_type, size_bytes, cid, inline, path)
@@ -128,6 +136,36 @@ export async function ingest(
   } else {
     folder = 'quarantine';
     reason = 'not-whitelisted';
+  }
+
+  // Alias forwarding: only whitelisted mail is ever forwarded — unknown senders stay in
+  // quarantine regardless of mode. A forward that can't happen (no verified target, rate
+  // limit, relay error) falls back to storing, so mail is never silently lost.
+  let forwarded = false;
+  const alias = resolution.alias;
+  if (alias && alias.mode !== 'store' && folder === 'inbox') {
+    if (auth.dmarcPass === false) {
+      // A spoof of a whitelisted sender. Never forward it: our rewrite re-signs it as our
+      // own domain, which would launder it into a DMARC pass at the user's real inbox.
+      // Store it here instead, where the reading pane shows the DMARC-fail warning.
+      reason += ' (forward-skipped:dmarc-fail)';
+    } else {
+      const outcome = await forwardAliasMessage(rawBuffer, parsed, alias);
+      forwarded = outcome.ok;
+      if (!outcome.ok) reason += ` (forward-skipped:${outcome.reason})`;
+    }
+  }
+  if (alias && alias.mode === 'forward' && forwarded) {
+    bumpAlias.run(Date.now(), alias.id);
+    return {
+      mailboxId: mailbox.id,
+      messageId: null,
+      folder: 'forwarded',
+      forwarded: true,
+      whitelistMatch: wl?.description ?? null,
+      reason: `${reason} -> forwarded`,
+      attachmentCount: parsed.attachments?.length ?? 0,
+    };
   }
 
   const messageId = nanoid();
@@ -216,6 +254,7 @@ export async function ingest(
     mailboxId: mailbox.id,
     messageId,
     folder,
+    forwarded,
     whitelistMatch: wl?.description ?? null,
     reason,
     attachmentCount: savedAttachments.length,

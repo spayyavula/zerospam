@@ -18,6 +18,18 @@ import { bus } from './events.js';
 import { config } from './config.js';
 import { ingest } from './ingest.js';
 import { sendMessage } from './sender.js';
+import {
+  REVERSE_PREFIX,
+  ForwardTargetError,
+  listForwardTargets,
+  getForwardTarget,
+  createForwardTarget,
+  reissueVerifyToken,
+  peekVerifyToken,
+  consumeVerifyToken,
+  deleteForwardTarget,
+  sendTargetVerificationEmail,
+} from './forwarding.js';
 import { ensureDkim, dnsRecord } from './dkim.js';
 import { authRoutes } from './routes/auth.js';
 import { screenerRoutes } from './routes/screener.js';
@@ -220,6 +232,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/api/auth/signup',
     '/auth/verify',
     '/public/digest/allow',
+    '/public/forward/verify',
     '/api/oauth/gmail/callback',
     '/api/oauth/outlook/callback',
     '/openapi.json',
@@ -1297,16 +1310,54 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     }
     return db
       .prepare(
-        'SELECT * FROM aliases WHERE mailbox_id = ? ORDER BY created_at DESC',
+        `SELECT a.*, t.email AS forward_target_email, t.verified_at AS forward_target_verified_at
+         FROM aliases a LEFT JOIN forward_targets t ON t.id = a.forward_target_id
+         WHERE a.mailbox_id = ? ORDER BY a.created_at DESC`,
       )
       .all(mailboxId);
   });
+
+  function aliasCount(accountId: number): number {
+    return (db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM aliases a JOIN mailboxes m ON m.id = a.mailbox_id
+         WHERE m.account_id = ?`,
+      )
+      .get(accountId) as { c: number }).c;
+  }
+
+  app.get('/api/aliases/usage', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    return { count: aliasCount(accountId), max: config.aliases.maxPerAccount };
+  });
+
+  const aliasModeSchema = z.enum(['store', 'forward', 'both']);
+
+  /**
+   * A forwarding mode needs a verified target owned by this account. Returns an error
+   * message, or null when the combination is valid.
+   */
+  function checkForwardConfig(
+    accountId: number,
+    mode: 'store' | 'forward' | 'both',
+    targetId: number | null,
+  ): string | null {
+    if (mode === 'store') return null;
+    if (targetId == null) return 'a forwarding address is required for this mode';
+    const t = getForwardTarget(accountId, targetId);
+    if (!t) return 'forwarding address not found';
+    if (!t.verified_at) return 'forwarding address is not verified yet';
+    return null;
+  }
 
   const aliasIn = z.object({
     mailboxId: z.coerce.number(),
     label: z.string().optional(),
     localPart: z.string().regex(/^[a-z0-9][a-z0-9._-]{0,40}$/i).optional(),
     expiresInDays: z.coerce.number().int().min(1).max(3650).nullable().optional(),
+    mode: aliasModeSchema.optional(),
+    forwardTargetId: z.coerce.number().int().nullable().optional(),
   });
 
   function randomLocal(): string {
@@ -1325,6 +1376,18 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     if (!ownsMailbox(accountId, b.mailboxId)) {
       return reply.code(404).send({ error: 'mailbox not found' });
     }
+    if (aliasCount(accountId) >= config.aliases.maxPerAccount) {
+      return reply
+        .code(403)
+        .send({ error: `alias limit reached (${config.aliases.maxPerAccount})` });
+    }
+    if (b.localPart && b.localPart.toLowerCase().startsWith(REVERSE_PREFIX)) {
+      return reply.code(400).send({ error: `aliases cannot start with "${REVERSE_PREFIX}"` });
+    }
+    const mode = b.mode ?? 'store';
+    const targetId = b.forwardTargetId ?? null;
+    const fwdErr = checkForwardConfig(accountId, mode, targetId);
+    if (fwdErr) return reply.code(400).send({ error: fwdErr });
     const mb = db.prepare('SELECT * FROM mailboxes WHERE id = ?').get(b.mailboxId) as
       | { address: string; domain_id: number }
       | undefined;
@@ -1343,7 +1406,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       const collidesWithMailbox = db
         .prepare('SELECT id FROM mailboxes WHERE address = ?')
         .get(address);
-      if (!exists && !collidesWithMailbox) break;
+      const collidesWithReverse = db
+        .prepare('SELECT id FROM reverse_aliases WHERE address = ?')
+        .get(address);
+      if (!exists && !collidesWithMailbox && !collidesWithReverse) break;
       if (b.localPart) return reply.code(409).send({ error: 'address already in use' });
       attempt++;
     }
@@ -1351,11 +1417,57 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       b.expiresInDays == null ? null : Date.now() + b.expiresInDays * 86_400_000;
     const result = db
       .prepare(
-        `INSERT INTO aliases (mailbox_id, address, label, expires_at, abused, received_count, last_seen, created_at)
-         VALUES (?, ?, ?, ?, 0, 0, NULL, ?) RETURNING id`,
+        `INSERT INTO aliases (mailbox_id, address, label, expires_at, abused, received_count, last_seen, created_at,
+                              mode, forward_target_id)
+         VALUES (?, ?, ?, ?, 0, 0, NULL, ?, ?, ?) RETURNING id`,
       )
-      .get(b.mailboxId, address, b.label ?? null, expires_at, Date.now()) as { id: number };
-    return { id: result.id, address, expires_at };
+      .get(
+        b.mailboxId,
+        address,
+        b.label ?? null,
+        expires_at,
+        Date.now(),
+        mode,
+        targetId,
+      ) as { id: number };
+    return { id: result.id, address, expires_at, mode, forward_target_id: targetId };
+  });
+
+  const aliasPatch = z.object({
+    label: z.string().max(200).nullable().optional(),
+    mode: aliasModeSchema.optional(),
+    forwardTargetId: z.coerce.number().int().nullable().optional(),
+  });
+
+  app.patch('/api/aliases/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    if (!ownsAlias(accountId, id)) {
+      return reply.code(404).send({ error: 'alias not found' });
+    }
+    const parsed = aliasPatch.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: `invalid body: ${parsed.error.issues[0].message}` });
+    }
+    const b = parsed.data;
+    const current = db
+      .prepare('SELECT mode, forward_target_id FROM aliases WHERE id = ?')
+      .get(id) as { mode: 'store' | 'forward' | 'both'; forward_target_id: number | null };
+    const mode = b.mode ?? current.mode;
+    const targetId = b.forwardTargetId !== undefined ? b.forwardTargetId : current.forward_target_id;
+    const fwdErr = checkForwardConfig(accountId, mode, targetId);
+    if (fwdErr) return reply.code(400).send({ error: fwdErr });
+    db.prepare('UPDATE aliases SET mode = ?, forward_target_id = ? WHERE id = ?').run(mode, targetId, id);
+    if (b.label !== undefined) {
+      db.prepare('UPDATE aliases SET label = ? WHERE id = ?').run(b.label, id);
+    }
+    return db
+      .prepare(
+        `SELECT a.*, t.email AS forward_target_email, t.verified_at AS forward_target_verified_at
+         FROM aliases a LEFT JOIN forward_targets t ON t.id = a.forward_target_id WHERE a.id = ?`,
+      )
+      .get(id);
   });
 
   app.post('/api/aliases/:id/abuse', async (req, reply) => {
@@ -1389,6 +1501,95 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     }
     db.prepare('DELETE FROM aliases WHERE id = ?').run(id);
     return { ok: true };
+  });
+
+  // ---- forwarding addresses (alias forwarding targets) ----
+  function sendForwardTargetError(reply: any, e: unknown) {
+    if (e instanceof ForwardTargetError) return reply.code(e.status).send({ error: e.message });
+    throw e;
+  }
+
+  app.get('/api/forward-targets', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    return listForwardTargets(accountId);
+  });
+
+  const forwardTargetIn = z.object({ email: z.string().trim().email().max(254) });
+
+  app.post('/api/forward-targets', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const parsed = forwardTargetIn.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'a valid email is required' });
+    try {
+      const { target, token } = createForwardTarget(accountId, parsed.data.email);
+      if (token) {
+        try {
+          await sendTargetVerificationEmail(target.email, token);
+        } catch (err) {
+          // Keep the row so the user can retry with /resend.
+          app.log.error({ err }, 'forward target verification email failed');
+        }
+      }
+      return { id: target.id, email: target.email, verified: !!target.verified_at };
+    } catch (e) {
+      return sendForwardTargetError(reply, e);
+    }
+  });
+
+  app.post('/api/forward-targets/:id/resend', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    try {
+      const { target, token } = reissueVerifyToken(accountId, id);
+      await sendTargetVerificationEmail(target.email, token);
+      return { ok: true };
+    } catch (e) {
+      return sendForwardTargetError(reply, e);
+    }
+  });
+
+  app.delete('/api/forward-targets/:id', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const id = Number((req.params as { id: string }).id);
+    // ON DELETE SET NULL on aliases.forward_target_id: aliases fall back to storing.
+    if (!deleteForwardTarget(accountId, id)) {
+      return reply.code(404).send({ error: 'forwarding address not found' });
+    }
+    return { ok: true };
+  });
+
+  // Public, token-authenticated. GET renders a confirm page and never verifies, so
+  // link pre-fetchers can't confirm on the user's behalf; POST consumes the token.
+  app.get('/public/forward/verify', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    const { renderForwardConfirmPage, renderForwardExpiredPage } = await import('./forward-pages.js');
+    const t = (req.query as { t?: string }).t ?? '';
+    const target = peekVerifyToken(t);
+    reply.type('text/html');
+    if (!target) return renderForwardExpiredPage();
+    return renderForwardConfirmPage({ token: t, email: target.email });
+  });
+
+  app.post('/public/forward/verify', {
+    config: { rateLimit: { max: config.rateLimitAuthPerMin, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    const { renderForwardVerifiedPage, renderForwardExpiredPage } = await import('./forward-pages.js');
+    const t = ((req.body ?? {}) as { t?: string }).t ?? '';
+    if (!t) return reply.code(400).send({ error: 'missing token' });
+    const target = consumeVerifyToken(t);
+    reply.type('text/html');
+    if (!target) return renderForwardExpiredPage();
+    return renderForwardVerifiedPage({
+      email: target.email,
+      webmailUrl: config.publicBaseUrl || undefined,
+    });
   });
 
   // ---- public digest action routes ----

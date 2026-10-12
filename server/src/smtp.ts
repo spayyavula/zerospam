@@ -3,6 +3,18 @@ import { readFileSync, existsSync } from 'node:fs';
 import { db } from './db.js';
 import { config } from './config.js';
 import { ingest } from './ingest.js';
+import {
+  isReverseAddress,
+  findActiveReverseAlias,
+  handleReverseReply,
+  replyRateLimited,
+} from './forwarding.js';
+
+function smtpError(code: number, message: string): Error {
+  const err = new Error(message) as Error & { responseCode: number };
+  err.responseCode = code;
+  return err;
+}
 
 export type SmtpTlsConfig = { certPath: string; keyPath: string };
 export type SmtpTlsOptions = { secure?: boolean; key?: Buffer; cert?: Buffer };
@@ -44,6 +56,8 @@ export function startSmtp() {
       if (alias && !alias.abused && (!alias.expires_at || alias.expires_at >= Date.now())) {
         return callback();
       }
+      // Reverse aliases (rv.*) accept replies the user sends from their real inbox.
+      if (isReverseAddress(addr) && findActiveReverseAlias(addr)) return callback();
       return callback(new Error(`550 5.1.1 No such mailbox: ${address.address}`));
     },
 
@@ -58,8 +72,20 @@ export function startSmtp() {
         const recipients = session.envelope.rcptTo.map((r) => r.address);
         const ip = session.remoteAddress;
 
-        const results = [];
+        // Check reply rate limits before processing anything, so a 451 never leaves
+        // half the recipients delivered (the sender's retry would duplicate them).
+        const reverseRcpts = recipients.filter((r) => isReverseAddress(r));
+        if (reverseRcpts.some((r) => replyRateLimited(r))) {
+          return callback(smtpError(451, '4.7.1 Reply rate limit reached, try again later'));
+        }
+
+        const results: Array<{ rcpt: string; folder?: string }> = [];
         for (const rcpt of recipients) {
+          if (isReverseAddress(rcpt)) {
+            const r = await handleReverseReply(raw, rcpt, ip);
+            results.push({ rcpt, folder: r.status === 'sent' ? 'replied' : `rejected:${r.reason}` });
+            continue;
+          }
           const r = await ingest(raw, rcpt, ip);
           results.push({ rcpt, ...r });
         }
@@ -70,7 +96,7 @@ export function startSmtp() {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[smtp] onData error', err);
-        callback(new Error('451 4.3.0 Storage error, try again later'));
+        callback(smtpError(451, '4.3.0 Storage error, try again later'));
       }
     },
   });

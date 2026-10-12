@@ -1,5 +1,9 @@
 import type {
   Alias,
+  AliasUsage,
+  ForwardTarget,
+  CreateForwardTargetResponse,
+  PatchAliasRequest,
   Attachment,
   AddWhitelistRuleResponse,
   AddWhitelistRuleRequest,
@@ -136,6 +140,18 @@ export const api = {
   restoreAlias: (id: number) =>
     handle(client.post<OkResponse>(`/api/aliases/${id}/restore`)),
   deleteAlias: (id: number) => handle(client.delete<OkResponse>(`/api/aliases/${id}`)),
+  patchAlias: (id: number, b: PatchAliasRequest) =>
+    handle(client.patch<Alias>(`/api/aliases/${id}`, b)),
+  aliasUsage: () => handle(client.get<AliasUsage>(`/api/aliases/usage`)),
+
+  // forwarding addresses for aliases
+  forwardTargets: () => handle(client.get<ForwardTarget[]>(`/api/forward-targets`)),
+  addForwardTarget: (email: string) =>
+    handle(client.post<CreateForwardTargetResponse>(`/api/forward-targets`, { email })),
+  resendForwardTarget: (id: number) =>
+    handle(client.post<OkResponse>(`/api/forward-targets/${id}/resend`)),
+  deleteForwardTarget: (id: number) =>
+    handle(client.delete<OkResponse>(`/api/forward-targets/${id}`)),
 
   // whitelist
   whitelist: (mailboxId: number) =>
