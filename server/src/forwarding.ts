@@ -440,6 +440,7 @@ export async function handleReverseReply(
   raw: Buffer,
   reverseAddress: string,
   clientIp?: string,
+  envelopeFrom?: string,
 ): Promise<ReplyOutcome> {
   const rev = findActiveReverseAlias(reverseAddress);
   if (!rev) return { status: 'rejected', reason: 'unknown-reverse-alias' };
@@ -456,11 +457,19 @@ export async function handleReverseReply(
   const target = verifiedTargetFor(rev.account_id, rev.forward_target_id);
   if (!target) return reject('no-verified-target');
 
-  const [parsed, auth] = await Promise.all([simpleParser(raw), checkAuth(raw, clientIp)]);
+  const [parsed, auth] = await Promise.all([simpleParser(raw), checkAuth(raw, clientIp, envelopeFrom)]);
   const from = addressesOf(parsed.from)[0]?.address;
   if (from !== target.email) return reject('sender-not-owner', { from });
-  if (config.aliases.replyRequireDmarc && auth.dmarcPass !== true) {
-    return reject('dmarc-not-pass', { from, dmarc: auth.dmarcPass });
+  // Same bar as DMARC: the From domain must be authenticated by an aligned DKIM or SPF
+  // pass. Requiring a literal DMARC *pass* would reject every domain that simply never
+  // published a DMARC record, even when its mail is properly signed.
+  if (config.aliases.replyRequireDmarc && !auth.fromAuthenticated) {
+    return reject('sender-not-authenticated', {
+      from,
+      dmarc: auth.dmarcPass,
+      dkim: auth.dkimPass,
+      spf: auth.spfPass,
+    });
   }
 
   const domain = rev.alias_address.split('@')[1];

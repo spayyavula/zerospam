@@ -161,7 +161,7 @@ describe('alias forwarding (ingest)', () => {
     await setup({ mode: 'forward' });
     const spy = vi
       .spyOn(mailauth, 'checkAuth')
-      .mockResolvedValue({ spfPass: false, dkimPass: false, dmarcPass: false });
+      .mockResolvedValue({ spfPass: false, dkimPass: false, dmarcPass: false, fromAuthenticated: false });
     try {
       const r = await ingest(mail({}), ALIAS);
       expect(r?.folder).toBe('inbox'); // stored with the DMARC-fail chip, not relayed
@@ -299,12 +299,29 @@ describe('reverse-alias replies', () => {
     expect(audit).toHaveLength(1);
   });
 
-  it('requires DMARC pass when configured (spoofed From of the real address)', async () => {
+  it('rejects an unauthenticated From of the real address (spoof) when auth is required', async () => {
     const { bossRev } = await forwardedSetup();
     limits.replyRequireDmarc = true;
     const r = await handleReverseReply(reply({ to: bossRev }), bossRev);
-    expect(r).toEqual({ status: 'rejected', reason: 'dmarc-not-pass' });
+    expect(r).toEqual({ status: 'rejected', reason: 'sender-not-authenticated' });
     expect(sent()).toHaveLength(0);
+  });
+
+  // Production case: the forwarding domain publishes no DMARC record, so DMARC can never
+  // "pass", but its mail carries a valid DKIM signature aligned with the From domain.
+  it('accepts a reply whose domain has no DMARC record but an aligned DKIM pass', async () => {
+    const { bossRev } = await forwardedSetup();
+    limits.replyRequireDmarc = true;
+    const spy = vi
+      .spyOn(mailauth, 'checkAuth')
+      .mockResolvedValue({ spfPass: true, dkimPass: true, dmarcPass: null, fromAuthenticated: true });
+    try {
+      const r = await handleReverseReply(reply({ to: bossRev }), bossRev);
+      expect(r).toEqual({ status: 'sent', contact: 'boss@trusted.com' });
+      expect(sent()).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('rejects replies once the alias is blocked', async () => {

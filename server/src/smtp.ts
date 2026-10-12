@@ -82,7 +82,8 @@ export function startSmtp() {
         const results: Array<{ rcpt: string; folder?: string }> = [];
         for (const rcpt of recipients) {
           if (isReverseAddress(rcpt)) {
-            const r = await handleReverseReply(raw, rcpt, ip);
+            const mailFrom = session.envelope.mailFrom ? session.envelope.mailFrom.address : undefined;
+            const r = await handleReverseReply(raw, rcpt, ip, mailFrom || undefined);
             results.push({ rcpt, folder: r.status === 'sent' ? 'replied' : `rejected:${r.reason}` });
             continue;
           }
