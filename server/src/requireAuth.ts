@@ -18,40 +18,43 @@ function hashToken(t: string): string {
 }
 
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Promise<void> {
-  // 1. Cookie session
-  const cookies = (req as any).cookies as Record<string, string> | undefined;
-  const cookieValue = cookies?.[SESSION_COOKIE_NAME];
-  if (cookieValue) {
-    const v = validateCookie(cookieValue, config.sessionSecret);
-    if (v) {
-      req.user = { id: v.userId };
-      req.session = { id: v.sessionId };
-      req.account = { id: v.accountId };
-      // Sliding window: refresh expiry on every authenticated request.
-      touchSession(v.sessionId);
+  // A native client sends a device Bearer token. Check it first: React Native's HTTP
+  // stack keeps any cookie it was ever given (the app signs in through the cookie
+  // endpoint before pairing), and if the cookie won, req.device would be unset and
+  // "sign out this device" could never revoke the token.
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    const token = auth.slice('Bearer '.length).trim();
+    if (token) {
+      const row = db
+        .prepare(
+          `SELECT d.id, d.user_id, u.account_id
+           FROM devices d
+           JOIN users u ON u.id = d.user_id
+           WHERE d.token_hash = ? AND d.revoked_at IS NULL`,
+        )
+        .get(hashToken(token)) as { id: number; user_id: number; account_id: number } | undefined;
+      if (row) {
+        req.user = { id: row.user_id };
+        req.device = { id: row.id };
+        req.account = { id: row.account_id };
+        db.prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?').run(Date.now(), row.id);
+      }
     }
   }
 
-  // 2. Bearer token (Phase B+ uses devices; Phase A still validates the table for forward compat)
+  // Cookie session (web).
   if (!req.account) {
-    const auth = req.headers.authorization;
-    if (auth && auth.startsWith('Bearer ')) {
-      const token = auth.slice('Bearer '.length).trim();
-      if (token) {
-        const row = db
-          .prepare(
-            `SELECT d.id, d.user_id, u.account_id
-             FROM devices d
-             JOIN users u ON u.id = d.user_id
-             WHERE d.token_hash = ? AND d.revoked_at IS NULL`,
-          )
-          .get(hashToken(token)) as { id: number; user_id: number; account_id: number } | undefined;
-        if (row) {
-          req.user = { id: row.user_id };
-          req.device = { id: row.id };
-          req.account = { id: row.account_id };
-          db.prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?').run(Date.now(), row.id);
-        }
+    const cookies = (req as any).cookies as Record<string, string> | undefined;
+    const cookieValue = cookies?.[SESSION_COOKIE_NAME];
+    if (cookieValue) {
+      const v = validateCookie(cookieValue, config.sessionSecret);
+      if (v) {
+        req.user = { id: v.userId };
+        req.session = { id: v.sessionId };
+        req.account = { id: v.accountId };
+        // Sliding window: refresh expiry on every authenticated request.
+        touchSession(v.sessionId);
       }
     }
   }
