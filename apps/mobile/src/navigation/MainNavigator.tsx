@@ -1,200 +1,89 @@
-import React, { useState } from 'react';
-import { Text, View, StyleSheet, Pressable } from 'react-native';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { MainTabParamList, MessageStackParamList } from './types';
+import { Ionicons } from '@expo/vector-icons';
+import type { AppStackParamList, MainTabParamList } from './types';
+import { useCounts, useMailboxes } from '../hooks/useApi';
 import { useMailboxStore } from '../stores/mailboxStore';
-import { useMailboxes, useCounts } from '../hooks/useApi';
+import { useTheme } from '../theme/ThemeProvider';
+import { fonts } from '../theme/tokens';
+import MailScreen from '../features/messages/MailScreen';
+import QuarantineScreen from '../features/messages/QuarantineScreen';
+import MessageScreen from '../features/messages/MessageScreen';
 import ScreenerScreen from '../features/screener/ScreenerScreen';
-import MessageListScreen from '../features/messages/MessageListScreen';
-import MessageDetailScreen from '../features/messages/MessageDetailScreen';
-import MailboxPickerModal from '../components/MailboxPickerModal';
-import SettingsScreen from '../features/settings/SettingsScreen';
+import ComposeScreen from '../features/compose/ComposeScreen';
+import SearchScreen from '../features/search/SearchScreen';
+import MoreScreen from '../features/more/MoreScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
-const MessageStack = createNativeStackNavigator<MessageStackParamList>();
+const Stack = createNativeStackNavigator<AppStackParamList>();
 
-// ── Stack navigators for Inbox / Quarantine ───────────────────────────────────
+function icon(name: keyof typeof Ionicons.glyphMap, focusedName: keyof typeof Ionicons.glyphMap) {
+  return function TabIcon({ focused, color, size }: { focused: boolean; color: string; size: number }) {
+    return <Ionicons name={focused ? focusedName : name} color={color} size={size} />;
+  };
+}
 
-function InboxStack() {
-  const activeId = useMailboxStore((s) => s.activeMailboxId);
+function useHeaderOptions() {
+  const { colors } = useTheme();
+  return {
+    headerStyle: { backgroundColor: colors.paper },
+    headerTintColor: colors.ink,
+    headerShadowVisible: false,
+    headerTitleStyle: { fontFamily: fonts.displayItalic, fontSize: 22, color: colors.ink },
+    contentStyle: { backgroundColor: colors.paper },
+  } as const;
+}
+
+function Tabs() {
+  const { colors } = useTheme();
+  const header = useHeaderOptions();
+  const mailboxId = useMailboxStore((s) => s.activeMailboxId);
+  const counts = useCounts(mailboxId);
+  const waiting = counts.data?.screener.total ?? 0;
+  const unread = counts.data?.inbox.unread ?? 0;
+
   return (
-    <MessageStack.Navigator
+    <Tab.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#0d1117' },
-        headerTintColor: '#dbe3ef',
-        headerShadowVisible: false,
+        ...header,
+        sceneStyle: { backgroundColor: colors.paper },
+        tabBarStyle: { backgroundColor: colors.paper, borderTopColor: colors.rule },
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.quiet,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarBadgeStyle: { backgroundColor: colors.signal, color: colors.onSignal, fontSize: 10, fontWeight: '700' },
       }}
     >
-      <MessageStack.Screen
-        name="MessageList"
-        component={MessageListScreen}
-        options={{ title: 'Inbox' }}
-        initialParams={{ folder: 'inbox', mailboxId: activeId ?? 0 }}
+      <Tab.Screen
+        name="Mail"
+        component={MailScreen}
+        options={{ tabBarIcon: icon('mail-outline', 'mail'), tabBarBadge: unread ? (unread > 99 ? '99+' : unread) : undefined }}
       />
-      <MessageStack.Screen
-        name="MessageDetail"
-        component={MessageDetailScreen}
-        options={{ title: 'Message' }}
-        initialParams={{ messageId: '' }}
+      <Tab.Screen
+        name="Screener"
+        component={ScreenerScreen}
+        options={{ tabBarIcon: icon('people-outline', 'people'), tabBarBadge: waiting ? waiting : undefined }}
       />
-    </MessageStack.Navigator>
+      <Tab.Screen name="Quarantine" component={QuarantineScreen} options={{ tabBarIcon: icon('shield-outline', 'shield') }} />
+      <Tab.Screen name="More" component={MoreScreen} options={{ tabBarIcon: icon('ellipsis-horizontal-circle-outline', 'ellipsis-horizontal-circle') }} />
+    </Tab.Navigator>
   );
 }
-
-function QuarantineStack() {
-  const activeId = useMailboxStore((s) => s.activeMailboxId);
-  return (
-    <MessageStack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: '#0d1117' },
-        headerTintColor: '#dbe3ef',
-        headerShadowVisible: false,
-      }}
-    >
-      <MessageStack.Screen
-        name="MessageList"
-        component={MessageListScreen}
-        options={{ title: 'Quarantine' }}
-        initialParams={{ folder: 'quarantine', mailboxId: activeId ?? 0 }}
-      />
-      <MessageStack.Screen
-        name="MessageDetail"
-        component={MessageDetailScreen}
-        options={{ title: 'Message' }}
-        initialParams={{ messageId: '' }}
-      />
-    </MessageStack.Navigator>
-  );
-}
-
-
-
-// ── Bootstrap + shared header components ─────────────────────────────────────
-
-function MailboxBootstrap() {
-  useMailboxes();
-  return null;
-}
-
-function ScreenerTabTitle() {
-  const mailboxes = useMailboxStore((s) => s.mailboxes);
-  const activeId = useMailboxStore((s) => s.activeMailboxId);
-  const active = mailboxes.find((m) => m.id === activeId);
-  return (
-    <Text style={styles.headerTitle} numberOfLines={1}>
-      {active ? active.address : 'Screener'}
-    </Text>
-  );
-}
-
-// Badge showing unread count.
-function CountBadge({ folder }: { folder: 'inbox' | 'quarantine' }) {
-  const activeId = useMailboxStore((s) => s.activeMailboxId);
-  const { data } = useCounts(activeId);
-  const count = data?.[folder]?.unread ?? 0;
-  if (count === 0) return null;
-  return (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>{count > 99 ? '99+' : String(count)}</Text>
-    </View>
-  );
-}
-
-// ── Mailbox picker button (shared across tabs) ────────────────────────────────
-
-function MailboxPickerButton({ onPress }: { onPress: () => void }) {
-  const mailboxes = useMailboxStore((s) => s.mailboxes);
-  if (mailboxes.length <= 1) return null;
-  return (
-    <Pressable
-      style={styles.pickerButton}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Switch mailbox"
-    >
-      <Text style={styles.pickerButtonText}>⌄</Text>
-    </Pressable>
-  );
-}
-
-// ── Main navigator ─────────────────────────────────────────────────────────────
 
 export default function MainNavigator() {
-  const [pickerVisible, setPickerVisible] = useState(false);
-
+  useMailboxes();
+  const header = useHeaderOptions();
   return (
-    <>
-      <MailboxBootstrap />
-      <MailboxPickerModal visible={pickerVisible} onClose={() => setPickerVisible(false)} />
-      <Tab.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: '#0d1117' },
-          headerTintColor: '#dbe3ef',
-          headerShadowVisible: false,
-          tabBarStyle: { backgroundColor: '#0d1117', borderTopColor: '#1e2736' },
-          tabBarActiveTintColor: '#5cc8ff',
-          tabBarInactiveTintColor: '#4a5568',
-          headerRight: () => <MailboxPickerButton onPress={() => setPickerVisible(true)} />,
-        }}
-      >
-        <Tab.Screen
-          name="Screener"
-          component={ScreenerScreen}
-          options={{
-            headerTitle: () => <ScreenerTabTitle />,
-          }}
-        />
-        <Tab.Screen
-          name="Inbox"
-          component={InboxStack}
-          options={{
-            headerShown: false,
-            tabBarLabel: 'Inbox',
-            tabBarBadge: undefined,
-          }}
-        />
-        <Tab.Screen
-          name="Quarantine"
-          component={QuarantineStack}
-          options={{
-            headerShown: false,
-            tabBarLabel: 'Quarantine',
-          }}
-        />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
-      </Tab.Navigator>
-    </>
+    <Stack.Navigator screenOptions={header}>
+      <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Message" component={MessageScreen} options={{ title: '' }} />
+      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen
+        name="Compose"
+        component={ComposeScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom', headerTitleStyle: { ...header.headerTitleStyle, fontSize: 20 } }}
+      />
+    </Stack.Navigator>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  headerTitle: {
-    color: '#dbe3ef',
-    fontSize: 16,
-    fontWeight: '700',
-    maxWidth: 240,
-  },
-  badge: {
-    backgroundColor: '#5cc8ff',
-    borderRadius: 8,
-    minWidth: 16,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  badgeText: { color: '#0b0e14', fontSize: 10, fontWeight: '700' },
-  pickerButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  pickerButtonText: {
-    color: '#5cc8ff',
-    fontSize: 20,
-    lineHeight: 22,
-  },
-});
-
-

@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
@@ -43,6 +43,7 @@ import { isAccountEntitled } from './billing.js';
 import { SESSION_COOKIE_NAME } from './sessions.js';
 import { getScreenerCounts } from './screener.js';
 import { registerOpenApi } from './openapi/register.js';
+import { signImageUrl, verifyImageSignature, extractRemoteImageUrls, IMAGE_URL_TTL_MS } from './image-sign.js';
 
 /**
  * Serve the built web SPA (web/dist): static files first, then a catch-all
@@ -239,6 +240,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     '/auth/verify',
     '/public/digest/allow',
     '/public/forward/verify',
+    '/public/img',
     '/api/stripe/webhook',
     '/api/oauth/gmail/callback',
     '/api/oauth/outlook/callback',
@@ -656,6 +658,38 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   // from our server, not from the user's browser/IP.
   app.get('/api/proxy/image', async (req, reply) => {
     const url = (req.query as { url?: string }).url ?? '';
+    return proxyImage(url, reply);
+  });
+
+  // Same proxy for the mobile app's WebView, authorized by a signed URL instead of a
+  // session (a WebView can't attach the Bearer token to <img> loads). See image-sign.ts.
+  app.get('/public/img', {
+    config: { rateLimit: { max: 600, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    const q = req.query as { u?: string; e?: string; s?: string };
+    if (!q.u || !q.e || !q.s || !verifyImageSignature(q.u, q.e, q.s)) {
+      return reply.code(403).send({ error: 'bad signature' });
+    }
+    // The WebView document is not our origin; helmet's default same-origin CORP would
+    // make Chromium drop the image.
+    reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+    return proxyImage(q.u, reply);
+  });
+
+  app.post('/api/messages/:id/remote-images', async (req, reply) => {
+    const accountId = (req as any).account?.id;
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' });
+    const { id } = req.params as { id: string };
+    if (!ownsMessage(accountId, id)) return reply.code(404).send({ error: 'message not found' });
+    const row = db.prepare('SELECT body_html FROM messages WHERE id = ?').get(id) as
+      | { body_html: string | null }
+      | undefined;
+    const map: Record<string, string> = {};
+    for (const url of extractRemoteImageUrls(row?.body_html ?? null)) map[url] = signImageUrl(url);
+    return { map, expiresInSec: IMAGE_URL_TTL_MS / 1000 };
+  });
+
+  async function proxyImage(url: string, reply: FastifyReply) {
     if (!/^https?:\/\//i.test(url)) {
       return reply.code(400).send({ error: 'bad url' });
     }
@@ -685,7 +719,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
     reply.header('Cache-Control', 'public, max-age=3600');
     reply.header('Referrer-Policy', 'no-referrer');
     return reply.send(resp.body);
-  });
+  }
 
   app.get('/api/messages/:id/attachments', async (req, reply) => {
     const accountId = (req as any).account?.id;

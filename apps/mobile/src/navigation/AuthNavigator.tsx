@@ -3,25 +3,26 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from './types';
 import LoginScreen from '../features/auth/LoginScreen';
 import TotpScreen from '../features/auth/TotpScreen';
+import SignupScreen from '../features/auth/SignupScreen';
+import { useTheme } from '../theme/ThemeProvider';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export default function AuthNavigator() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#0b0e14' },
-        headerTintColor: '#dbe3ef',
+        headerStyle: { backgroundColor: colors.paper },
+        headerTintColor: colors.ink,
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: '#0b0e14' },
+        headerTitle: '',
+        contentStyle: { backgroundColor: colors.paper },
       }}
     >
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-      <Stack.Screen
-        name="Totp"
-        component={TotpScreen}
-        options={{ title: 'Verification' }}
-      />
+      <Stack.Screen name="Totp" component={TotpScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
     </Stack.Navigator>
   );
 }

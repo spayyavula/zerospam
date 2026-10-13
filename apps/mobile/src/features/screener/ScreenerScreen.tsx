@@ -1,174 +1,180 @@
 import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import type { ScreenerSender } from '@zerospam/shared-api';
-import {
-  useScreener,
-  useScreenerAllow,
-  useScreenerReject,
-  useScreenerAllowDomain,
-} from '../../hooks/useApi';
+import { Button, EmptyState, ErrorState, Loading, Text } from '../../components/ui';
+import { useScreener, useScreenerAllow, useScreenerAllowDomain, useScreenerReject } from '../../hooks/useApi';
 import { useMailboxStore } from '../../stores/mailboxStore';
-import SenderCard from './components/SenderCard';
-import DomainExpandBanner from './components/DomainExpandBanner';
+import { useTheme } from '../../theme/ThemeProvider';
+import { fonts, radius, space } from '../../theme/tokens';
+import { initials, shortDate } from '../../lib/format';
+import { errorText } from '../../lib/apiClient';
+import { toast } from '../../lib/toast';
 
-type DomainPrompt = { mailboxId: number; domain: string };
-
-export default function ScreenerScreen() {
-  const mailboxId = useMailboxStore((s) => s.activeMailboxId);
-  const { data: senders = [], isFetching, refetch, isError } = useScreener(mailboxId);
-
-  // Optimistic: track sender addresses being dismissed so they hide immediately.
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [domainPrompt, setDomainPrompt] = useState<DomainPrompt | null>(null);
-
-  const allowMut = useScreenerAllow();
-  const rejectMut = useScreenerReject();
-  const allowDomainMut = useScreenerAllowDomain();
-
-  const dismiss = useCallback((address: string) => {
-    setDismissed((prev) => new Set(prev).add(address));
-  }, []);
-
-  const handleAllow = useCallback(
-    (sender: ScreenerSender) => {
-      if (mailboxId == null) return;
-      dismiss(sender.address);
-      allowMut.mutate(
-        { mailboxId, senderAddress: sender.address },
-        {
-          onSuccess: (res) => {
-            if (res.suggest_domain_expand) {
-              setDomainPrompt({ mailboxId, domain: res.domain });
-            }
-          },
-          onError: () => {
-            // Revert optimistic dismiss on failure
-            setDismissed((prev) => {
-              const next = new Set(prev);
-              next.delete(sender.address);
-              return next;
-            });
-          },
-        },
-      );
-    },
-    [mailboxId, allowMut, dismiss],
-  );
-
-  const handleReject = useCallback(
-    (sender: ScreenerSender) => {
-      if (mailboxId == null) return;
-      dismiss(sender.address);
-      rejectMut.mutate(
-        { mailboxId, senderAddress: sender.address },
-        {
-          onError: () => {
-            setDismissed((prev) => {
-              const next = new Set(prev);
-              next.delete(sender.address);
-              return next;
-            });
-          },
-        },
-      );
-    },
-    [mailboxId, rejectMut, dismiss],
-  );
-
-  const handleAllowDomain = useCallback(() => {
-    if (!domainPrompt) return;
-    allowDomainMut.mutate(domainPrompt, { onSettled: () => setDomainPrompt(null) });
-  }, [domainPrompt, allowDomainMut]);
-
-  const visible = senders.filter((s) => !dismissed.has(s.address));
-
-  if (mailboxId == null) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>No mailbox selected.</Text>
-      </View>
-    );
-  }
-
-  if (isError) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>Could not load Screener.</Text>
-        <Pressable style={styles.retryButton} onPress={() => void refetch()} accessibilityRole="button">
-          <Text style={styles.retryText}>Retry</Text>
-        </Pressable>
-      </View>
-    );
-  }
+function SenderCard({
+  sender,
+  onAllow,
+  onBlock,
+}: {
+  sender: ScreenerSender;
+  onAllow: () => void;
+  onBlock: () => void;
+}) {
+  const { colors } = useTheme();
+  const navigation = useNavigation();
+  const [open, setOpen] = useState(false);
+  const label = sender.name?.trim() || sender.address;
 
   return (
-    <View style={styles.container}>
-      {domainPrompt && (
-        <DomainExpandBanner
-          domain={domainPrompt.domain}
-          loading={allowDomainMut.isPending}
-          onAccept={handleAllowDomain}
-          onDismiss={() => setDomainPrompt(null)}
-        />
+    <View style={{ borderWidth: 1, borderColor: colors.rule, borderRadius: radius.lg, backgroundColor: colors.paper, overflow: 'hidden' }}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}, ${sender.message_count} message${sender.message_count === 1 ? '' : 's'}. ${open ? 'Hide' : 'Show'} messages`}
+        style={{ flexDirection: 'row', gap: space.md, padding: space.lg, alignItems: 'center' }}
+      >
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.paperDeep, borderWidth: 1, borderColor: colors.rule, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: fonts.display, fontSize: 17 }}>{initials(label)}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text variant="heading" numberOfLines={1}>{label}</Text>
+          {sender.name ? <Text variant="small" tone="quiet" numberOfLines={1}>{sender.address}</Text> : null}
+          <Text variant="caption" tone="quiet">
+            {sender.message_count} message{sender.message_count === 1 ? '' : 's'} · {shortDate(sender.latest_received_at)}
+          </Text>
+        </View>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.quiet} />
+      </Pressable>
+
+      {open ? (
+        sender.messages.map((m) => (
+          <Pressable
+            key={m.id}
+            onPress={() => navigation.navigate('Message', { messageId: m.id, mailboxId: m.mailbox_id })}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ paddingHorizontal: space.lg, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: colors.rule, backgroundColor: pressed ? colors.paperDeep : colors.paper })}
+          >
+            <View style={{ flexDirection: 'row', gap: space.sm }}>
+              <Text variant="small" numberOfLines={1} style={{ flex: 1, fontWeight: '600' }}>{m.subject?.trim() || '(no subject)'}</Text>
+              <Text variant="caption" tone="quiet">{shortDate(m.received_at)}</Text>
+            </View>
+            {m.preview ? <Text variant="small" tone="quiet" numberOfLines={2}>{m.preview}</Text> : null}
+          </Pressable>
+        ))
+      ) : (
+        <View style={{ paddingHorizontal: space.lg, paddingBottom: space.md, gap: 2 }}>
+          <Text variant="small" numberOfLines={1} style={{ fontWeight: '600' }}>{sender.latest_subject || '(no subject)'}</Text>
+          {sender.latest_preview ? <Text variant="small" tone="quiet" numberOfLines={2}>{sender.latest_preview}</Text> : null}
+        </View>
       )}
 
-      <FlatList
-        data={visible}
-        keyExtractor={(item) => item.address}
-        renderItem={({ item }) => (
-          <SenderCard
-            sender={item}
-            onAllow={handleAllow}
-            onReject={handleReject}
-          />
-        )}
-        contentContainerStyle={visible.length === 0 ? styles.emptyList : styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching}
-            onRefresh={() => void refetch()}
-            tintColor="#5cc8ff"
-          />
-        }
-        ListEmptyComponent={
-          isFetching ? (
-            <ActivityIndicator color="#5cc8ff" style={styles.loader} />
-          ) : (
-            <View style={styles.center}>
-              <Text style={styles.doneTitle}>You're all caught up.</Text>
-              <Text style={styles.doneSub}>No unknown senders waiting.</Text>
-            </View>
-          )
-        }
-      />
+      <View style={{ flexDirection: 'row', gap: space.sm, padding: space.md, borderTopWidth: 1, borderTopColor: colors.rule, backgroundColor: colors.paperDeep }}>
+        <Button style={{ flex: 1 }} kind="secondary" icon="close" title="Decline" onPress={onBlock} accessibilityLabel={`Decline ${sender.address}`} />
+        <Button style={{ flex: 1 }} icon="checkmark" title="Allow" onPress={onAllow} accessibilityLabel={`Allow ${sender.address}`} />
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0e14' },
-  list: { paddingVertical: 8 },
-  emptyList: { flexGrow: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  empty: { color: '#7c8aa0', fontSize: 15, textAlign: 'center' },
-  doneTitle: { color: '#dbe3ef', fontSize: 18, fontWeight: '700', marginBottom: 6 },
-  doneSub: { color: '#7c8aa0', fontSize: 14 },
-  loader: { marginTop: 40 },
-  retryButton: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#2a3241',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  retryText: { color: '#5cc8ff', fontSize: 14, fontWeight: '600' },
-});
+export default function ScreenerScreen() {
+  const { colors } = useTheme();
+  const mailboxId = useMailboxStore((s) => s.activeMailboxId);
+  const q = useScreener(mailboxId);
+  const allow = useScreenerAllow();
+  const reject = useScreenerReject();
+  const allowDomain = useScreenerAllowDomain();
+
+  // Hide a sender as soon as it's decided; bring it back if the request fails.
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [domainPrompt, setDomainPrompt] = useState<string | null>(null);
+
+  const hide = useCallback((a: string, on: boolean) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(a);
+      else next.delete(a);
+      return next;
+    });
+  }, []);
+
+  const onAllow = (s: ScreenerSender) => {
+    if (mailboxId == null) return;
+    hide(s.address, true);
+    allow.mutate(
+      { mailboxId, senderAddress: s.address },
+      {
+        onSuccess: (r) => {
+          toast(`Allowed · ${r.moved} message${r.moved === 1 ? '' : 's'} moved to Inbox`);
+          if (r.suggest_domain_expand) setDomainPrompt(r.domain);
+        },
+        onError: (e) => {
+          hide(s.address, false);
+          toast(errorText(e));
+        },
+      },
+    );
+  };
+
+  const onBlock = (s: ScreenerSender) => {
+    if (mailboxId == null) return;
+    hide(s.address, true);
+    reject.mutate(
+      { mailboxId, senderAddress: s.address },
+      {
+        onSuccess: () => toast(`Declined · hidden from the Screener for 30 days`),
+        onError: (e) => {
+          hide(s.address, false);
+          toast(errorText(e));
+        },
+      },
+    );
+  };
+
+  if (mailboxId == null || q.isPending) return <Loading />;
+  if (q.isError) return <ErrorState message={errorText(q.error, 'Could not load the Screener.')} onRetry={() => void q.refetch()} />;
+
+  const visible = (q.data ?? []).filter((s) => !hidden.has(s.address));
+
+  return (
+    <FlatList
+      style={{ flex: 1, backgroundColor: colors.paper }}
+      contentContainerStyle={visible.length === 0 ? { flexGrow: 1 } : { padding: space.lg, gap: space.md, paddingBottom: space.xxl }}
+      data={visible}
+      keyExtractor={(s) => s.address}
+      ListHeaderComponent={
+        <View style={{ gap: space.md, marginBottom: visible.length ? 0 : space.lg }}>
+          {visible.length ? (
+            <Text variant="small" tone="soft">
+              New senders wait here. Allow them once and their mail goes straight to your Inbox from now on.
+            </Text>
+          ) : null}
+          {domainPrompt && mailboxId != null ? (
+            <View style={{ backgroundColor: colors.paperDeep, borderRadius: radius.md, padding: space.md, gap: space.sm, borderWidth: 1, borderColor: colors.signal }}>
+              <Text variant="small">Allow everyone at <Text variant="small" style={{ fontWeight: '700' }}>{domainPrompt}</Text>?</Text>
+              <View style={{ flexDirection: 'row', gap: space.sm }}>
+                <Button style={{ flex: 1 }} kind="ghost" title="Not now" onPress={() => setDomainPrompt(null)} />
+                <Button
+                  style={{ flex: 1 }}
+                  title="Allow domain"
+                  loading={allowDomain.isPending}
+                  onPress={() =>
+                    allowDomain.mutate(
+                      { mailboxId, domain: domainPrompt },
+                      { onSuccess: () => toast(`Allowed everyone at ${domainPrompt}`), onError: (e) => toast(errorText(e)), onSettled: () => setDomainPrompt(null) },
+                    )
+                  }
+                />
+              </View>
+            </View>
+          ) : null}
+        </View>
+      }
+      ListEmptyComponent={<EmptyState icon="people-outline" title="No one waiting" body="When someone new writes to you, they show up here first. You decide if they reach your Inbox." />}
+      renderItem={({ item }) => <SenderCard sender={item} onAllow={() => onAllow(item)} onBlock={() => onBlock(item)} />}
+      refreshControl={
+        <RefreshControl refreshing={q.isRefetching} onRefresh={() => { setHidden(new Set()); void q.refetch(); }} tintColor={colors.ink} colors={[colors.onSignal]} progressBackgroundColor={colors.signal} />
+      }
+    />
+  );
+}

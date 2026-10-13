@@ -1,0 +1,33 @@
+# ZeroSpam for Android (Expo)
+
+The native app. Spec: [`docs/android-app-spec.md`](../../docs/android-app-spec.md).
+
+## Run it on your phone
+
+1. Install **Expo Go** from the Play Store.
+2. From the repo root: `npm install`, then `npm run dev:mobile`.
+3. Scan the QR code with Expo Go. The app talks to `https://zero-spam.email` by default.
+
+The app is on Expo SDK 54. If Expo Go says the project's SDK is unsupported (Expo Go only
+runs the newest SDKs), install a preview build instead: `npx eas build -p android --profile preview`
+gives you an APK link.
+
+To point it at a local server instead, create `apps/mobile/.env.local` with
+`EXPO_PUBLIC_API_BASE_URL=http://<your computer's LAN IP>:8025` and add that origin to the
+server's `ALLOWED_ORIGINS`.
+
+## Checks
+
+```
+npm run typecheck:mobile
+npm run lint:mobile
+npm test --workspace=@zerospam/mobile
+```
+
+## Layout
+
+- `src/navigation` — sign-in stack, tabs (Mail, Screener, Quarantine, More) and the app stack (Message, Compose, Search).
+- `src/features/*` — one folder per area.
+- `src/theme` — Reading Room palette (mirrors `web/src/styles.css`), light/dark.
+- `src/lib/messageHtml.ts` — the locked-down document mail bodies render in (no JS, no network; "Show images" uses signed proxy URLs).
+- `src/lib/apiClient.ts` — shared API client with the device token; 401 signs the phone out, 402 shows the trial-ended screen.
