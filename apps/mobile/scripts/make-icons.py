@@ -18,22 +18,28 @@ STORE = os.path.join(ROOT, 'apps', 'mobile', 'store')
 PAPER, INK, SIGNAL, PAPER_DARK, INK_DARK = '#FBF8F1', '#0A0A0A', '#FFD52E', '#0E0E0C', '#F3EFE4'
 
 
+def mark_mask(size, scale=1.0):
+    """The ZeroSpam mark as an alpha mask: a bold zero cut by a mail slot (also reads as Ø,
+    the empty set). Drawn at 4x and downsampled for clean edges."""
+    S = size * 4
+    u = S / 100 * scale
+    c = S / 2
+    m = Image.new('L', (S, S), 0)
+    d = ImageDraw.Draw(m)
+    # Ring: outer 60x72, inner 34x46 (units of 1/100 at scale 1).
+    d.ellipse([c - 30 * u, c - 36 * u, c + 30 * u, c + 36 * u], fill=255)
+    d.ellipse([c - 17 * u, c - 23 * u, c + 17 * u, c + 23 * u], fill=0)
+    # The slot: a band cut through the ring, with the letter-slot bar inside it.
+    d.rounded_rectangle([c - 36 * u, c - 4 * u, c + 36 * u, c + 4 * u], radius=4 * u, fill=0)
+    d.rounded_rectangle([c - 30 * u, c - 2.5 * u, c + 30 * u, c + 2.5 * u], radius=2.5 * u, fill=255)
+    return m.resize((size, size), Image.LANCZOS)
+
+
 def monogram(size, fg, bg=None, scale=1.0):
-    """Italic Z with the signal-yellow dot, centred in a square."""
+    """Mark in `fg` on `bg` (transparent when bg is None)."""
     im = Image.new('RGBA', (size, size), bg or (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    font = ImageFont.truetype(ITALIC, int(size * 0.66 * scale))
-    l, t, r, b = d.textbbox((0, 0), 'Z', font=font)
-    w, h = r - l, b - t
-    dot = int(size * 0.13 * scale)
-    gap = int(size * 0.02 * scale)
-    total = w + gap + dot
-    x = (size - total) / 2 - l
-    y = (size - h) / 2 - t
-    d.text((x, y), 'Z', font=font, fill=fg)
-    dx = x + l + w + gap
-    dy = y + t + h - dot
-    d.ellipse([dx, dy, dx + dot, dy + dot], fill=SIGNAL)
+    ink = Image.new('RGBA', (size, size), fg)
+    im.paste(ink, (0, 0), mark_mask(size, scale))
     return im
 
 
@@ -56,31 +62,29 @@ def wordmark(height, fg, pad=0.25):
 
 def main():
     os.makedirs(STORE, exist_ok=True)
-    monogram(1024, INK, PAPER).convert('RGB').save(os.path.join(ASSETS, 'icon.png'))
+    monogram(1024, INK, SIGNAL).convert('RGB').save(os.path.join(ASSETS, 'icon.png'))
     # Adaptive icon: Android masks to a circle/squircle and keeps the centre ~66% safe.
-    monogram(1024, INK, scale=0.62).save(os.path.join(ASSETS, 'adaptive-icon.png'))
+    monogram(1024, INK, scale=0.66).save(os.path.join(ASSETS, 'adaptive-icon.png'))
     # Status-bar notification icon: Android uses only the alpha channel.
-    note = Image.new('RGBA', (96, 96), (0, 0, 0, 0))
-    font = ImageFont.truetype(ITALIC, 80)
-    nd = ImageDraw.Draw(note)
-    l, t, r, b = nd.textbbox((0, 0), 'Z', font=font)
-    nd.text(((96 - (r - l)) / 2 - l, (96 - (b - t)) / 2 - t), 'Z', font=font, fill='white')
+    note = monogram(96, (255, 255, 255, 255), scale=1.25)
     note.save(os.path.join(ASSETS, 'notification-icon.png'))
     wordmark(220, INK).save(os.path.join(ASSETS, 'splash-icon.png'))
     wordmark(220, INK_DARK).save(os.path.join(ASSETS, 'splash-icon-dark.png'))
-    monogram(48, INK, PAPER).convert('RGB').save(os.path.join(ASSETS, 'favicon.png'))
+    monogram(48, INK, SIGNAL).convert('RGB').save(os.path.join(ASSETS, 'favicon.png'))
 
     # Google Play listing assets.
-    monogram(512, INK, PAPER).convert('RGB').save(os.path.join(STORE, 'play-icon-512.png'))
+    monogram(512, INK, SIGNAL).convert('RGB').save(os.path.join(STORE, 'play-icon-512.png'))
     fg = Image.new('RGB', (1024, 500), PAPER)
     wm = wordmark(150, INK, pad=0.1)
-    fg.paste(wm, ((1024 - wm.width) // 2, 120), wm)
+    mk = monogram(170, INK)
+    x0 = (1024 - (mk.width + 24 + wm.width)) // 2
+    fg.paste(mk, (x0, 95), mk)
+    fg.paste(wm, (x0 + mk.width + 24, 120), wm)
     d = ImageDraw.Draw(fg)
     tag = 'Only the people you approve reach your inbox.'
     f2 = ImageFont.truetype(SANS, 34)
     l, t, r, b = d.textbbox((0, 0), tag, font=f2)
     d.text(((1024 - (r - l)) / 2, 340), tag, font=f2, fill='#2A2A2A')
-    d.rectangle([462, 300, 562, 306], fill=SIGNAL)
     fg.save(os.path.join(STORE, 'play-feature-graphic.png'))
     print('wrote assets to', ASSETS, 'and', STORE)
 

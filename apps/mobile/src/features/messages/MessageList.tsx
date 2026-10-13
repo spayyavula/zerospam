@@ -109,7 +109,7 @@ export default function MessageList({
       contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingBottom: 96 }}
       data={items}
       keyExtractor={(m) => m.id}
-      ItemSeparatorComponent={() => <Divider inset={36} />}
+      ItemSeparatorComponent={() => <Divider inset={68} />}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={<EmptyState {...EMPTY[folder]} />}
       renderItem={({ item }) => {
