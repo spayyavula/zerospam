@@ -6,8 +6,9 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the entire monorepo so Metro can resolve workspace packages.
-config.watchFolders = [workspaceRoot];
+// Watch the entire monorepo so Metro can resolve workspace packages (added to Expo's
+// defaults rather than replacing them).
+config.watchFolders = [...new Set([...(config.watchFolders ?? []), workspaceRoot])];
 
 // Pin the entire react ecosystem to the mobile workspace's copies.
 // Without this, packages in root node_modules (react-native-web, react-navigation)

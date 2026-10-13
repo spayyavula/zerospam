@@ -51,6 +51,7 @@ export function isUsernameAvailable(username: string, domain: string): boolean {
   const existing =
     db.prepare('SELECT 1 FROM mailboxes WHERE address = ?').get(address) ||
     db.prepare('SELECT 1 FROM aliases WHERE address = ?').get(address) ||
-    db.prepare('SELECT 1 FROM reverse_aliases WHERE address = ?').get(address);
+    db.prepare('SELECT 1 FROM reverse_aliases WHERE address = ?').get(address) ||
+    db.prepare('SELECT 1 FROM retired_addresses WHERE address = ?').get(address);
   return !existing;
 }
