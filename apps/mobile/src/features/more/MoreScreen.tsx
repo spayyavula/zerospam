@@ -9,6 +9,7 @@ import { useActiveMailbox, useMailboxStore } from '../../stores/mailboxStore';
 import { useTheme, type ThemeChoice } from '../../theme/ThemeProvider';
 import { radius, space } from '../../theme/tokens';
 import { PRIVACY_URL, TERMS_URL, WEB_URL } from '../../config';
+import NotificationSettings from './NotificationSettings';
 
 function ThemePicker() {
   const { colors, choice, setChoice } = useTheme();
@@ -59,7 +60,7 @@ export function planLine(b: ReturnType<typeof useAuthStore.getState>['billing'])
   return null;
 }
 
-export default function MoreScreen({ extraSections }: { extraSections?: React.ReactNode }) {
+export default function MoreScreen() {
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const billing = useAuthStore((s) => s.billing);
@@ -84,7 +85,7 @@ export default function MoreScreen({ extraSections }: { extraSections?: React.Re
       <SectionHeader title="Appearance" />
       <ThemePicker />
 
-      {extraSections}
+      <NotificationSettings />
 
       <SectionHeader title="On the website" />
       <Text variant="small" tone="quiet" style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>

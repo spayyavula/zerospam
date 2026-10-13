@@ -189,6 +189,12 @@ export const config = {
     priceAnnual: process.env.STRIPE_PRICE_ANNUAL ?? '',
     reminderTickSec: envInt('BILLING_TICK_INTERVAL_SEC', 3600),
   },
+  // New-mail notifications for the mobile app, delivered through Expo's push service.
+  push: {
+    enabled: (process.env.PUSH_ENABLED ?? 'false').toLowerCase() === 'true',
+    /** Optional: only needed if "Enhanced push security" is turned on in the Expo project. */
+    expoAccessToken: process.env.EXPO_ACCESS_TOKEN ?? '',
+  },
 } as const;
 
 /** Fail fast at boot if billing is switched on without its Stripe configuration. */

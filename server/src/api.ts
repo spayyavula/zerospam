@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { db, runInTx } from './db.js';
 import type { AttachmentRow, MessageRow } from './db.js';
 import { deleteRaw, deleteAttachmentFile } from './storage.js';
-import { bus } from './events.js';
+import { bus, type AppEvent } from './events.js';
 import { config } from './config.js';
 import { ingest } from './ingest.js';
 import { sendMessage } from './sender.js';
@@ -1783,7 +1783,10 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       'X-Accel-Buffering': 'no',
     });
     reply.raw.write(`: hello\n\n`);
-    const handler = (e: unknown) => {
+    // Only this account's mailboxes: every event carries a mailboxId.
+    const accountId = (req as any).account?.id ?? -1;
+    const handler = (e: AppEvent) => {
+      if (!ownsMailbox(accountId, e.mailboxId)) return;
       reply.raw.write(`data: ${JSON.stringify(e)}\n\n`);
     };
     bus.on('event', handler);
