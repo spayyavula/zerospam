@@ -12,7 +12,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "http://localhost:8025"
-      }
+      },
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -24,7 +25,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://zero-spam.email"
-      }
+      },
+      "environment": "preview"
     },
     "production": {
       "distribution": "store",
@@ -34,7 +36,8 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://zero-spam.email"
       },
-      "autoIncrement": true
+      "autoIncrement": true,
+      "environment": "production"
     }
   },
   "submit": {

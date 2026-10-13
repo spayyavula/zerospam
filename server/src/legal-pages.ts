@@ -343,3 +343,40 @@ export function renderTermsOfServicePage(): string {
       </p>
 ${SHELL_FOOT}`;
 }
+
+/** Public account-deletion page (the "delete account" URL Google Play asks for). */
+export function renderDeleteAccountPage(): string {
+  return `${shellHead({
+    title: 'Delete your account — ZeroSpam Email',
+    description: 'How to permanently delete your ZeroSpam account and the data in it.',
+    canonical: 'https://zero-spam.email/delete-account',
+  })}
+      <nav class="topnav"><a href="/">ZeroSpam Home</a> · <a href="/privacy-policy">Privacy Policy</a></nav>
+      <h1>Delete your ZeroSpam account</h1>
+      <p class="meta">ZeroSpam Email, operated by SAALR LLC</p>
+
+      <h2>In the Android app</h2>
+      <p>Open <strong>More</strong>, choose <strong>Delete account</strong>, and confirm with your password
+      (and your two-factor code if you use one). Deletion happens immediately.</p>
+
+      <h2>Without the app</h2>
+      <p>Email <a href="mailto:${CONTACT}?subject=Delete%20my%20account">${CONTACT}</a> from the address you
+      signed up with and ask us to delete your account. We confirm the request with you and delete the
+      account within 7 days.</p>
+
+      <h2>What is deleted</h2>
+      <ul>
+        <li>Your mailboxes and every message and attachment in them, including Quarantine and Trash</li>
+        <li>Aliases, approved senders and rules, drafts, and forwarding addresses</li>
+        <li>Connected Gmail and Outlook accounts and their access tokens</li>
+        <li>Your sign-in details, signed-in devices, and push notification tokens</li>
+      </ul>
+      <p>Any paid plan is cancelled first, so you are not charged again.</p>
+
+      <h2>What is kept</h2>
+      <p>A minimal security log entry that an account was deleted (with no mail content) is kept for up to
+      12 months. Payment records held by our payment processor, Stripe, are kept as long as tax and
+      accounting law requires.</p>
+      <p>Deletion can't be undone. Your address and aliases are retired: they stop receiving mail and are never given to anyone else.</p>
+${SHELL_FOOT}`;
+}

@@ -10,7 +10,8 @@ export type AuditEvent =
   | 'totp.fail'
   | 'device.pair'
   | 'device.revoke'
-  | 'device.signout';
+  | 'device.signout'
+  | 'account.delete';
 
 export type RecordAuditInput = {
   event: AuditEvent | (string & {}); // allow forward-compat strings

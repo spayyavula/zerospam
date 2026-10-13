@@ -46,6 +46,7 @@ beforeEach(() => {
     DELETE FROM aliases;
     DELETE FROM reverse_aliases;
     DELETE FROM outbound_events;
+    DELETE FROM retired_addresses;
     DELETE FROM forward_targets;
     DELETE FROM drafts;
     DELETE FROM mailboxes;

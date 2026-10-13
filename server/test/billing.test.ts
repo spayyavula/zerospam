@@ -39,6 +39,7 @@ function stubStripe(): Calls {
     customers: { create: async (p) => (calls.customers.push(p), { id: `cus_${calls.customers.length}` }) },
     checkout: { sessions: { create: async (p) => (calls.checkout.push(p), { url: 'https://checkout.stripe.test/s/1' }) } },
     billingPortal: { sessions: { create: async (p) => (calls.portal.push(p), { url: 'https://billing.stripe.test/p/1' }) } },
+    subscriptions: { cancel: async () => ({}) },
   };
   setStripeClientForTests(api);
   return calls;

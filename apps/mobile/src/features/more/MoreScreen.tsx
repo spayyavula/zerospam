@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import Constants from 'expo-constants';
+import { useNavigation } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
 import FolderSheet from '../../components/FolderSheet';
 import { Divider, Row, SectionHeader, Text } from '../../components/ui';
@@ -61,6 +62,7 @@ export function planLine(b: ReturnType<typeof useAuthStore.getState>['billing'])
 }
 
 export default function MoreScreen() {
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const billing = useAuthStore((s) => s.billing);
@@ -120,6 +122,8 @@ export default function MoreScreen() {
           ])
         }
       />
+      <Divider />
+      <Row icon="trash-outline" title="Delete account" danger right={<View />} onPress={() => navigation.navigate('DeleteAccount')} />
       <Divider />
       <FolderSheet visible={sheet} onClose={() => setSheet(false)} showFolders={false} />
     </ScrollView>

@@ -56,7 +56,15 @@ release target.
 - Tap opens the message.
 - Sign-out and token revocation stop pushes immediately.
 
-### 3.5 Out of scope for v1
+### 3.5 Account deletion (Google Play requirement)
+Apps that create accounts must offer deletion inside the app and on the web.
+- More → Delete account, confirmed with the password (and the 2FA code when enabled). `POST /api/account/delete`.
+- Public page `https://zero-spam.email/delete-account` explaining how to delete, with an email route for people without the app.
+- The deletion cancels any Stripe subscription first, and aborts if that fails. It then deletes mailboxes, mail (rows and files), aliases, rules, drafts, connections, forwarding addresses, users and devices.
+- Domain rows are never deleted. The shared signup domain holds the DKIM key published in DNS.
+- Deleted addresses and aliases go into `retired_addresses` and can never be claimed again.
+
+### 3.6 Out of scope for v1
 Drafts list/editing, attachments in compose, whitelist rule editor, digest settings, TOTP setup, password change, connected Gmail/Outlook accounts, billing management. All stay on web; More links to the website for them (except billing, see §2).
 
 ## 4. Server changes
@@ -94,4 +102,4 @@ Four PRs, each mergeable on its own:
 1. This spec + foundation + core mail (+ signed image proxy).
 2. Screener, Quarantine, Aliases.
 3. Push notifications (server + app) + SSE fix.
-4. Release config and `docs/android-release.md`.
+4. Account deletion, release config, and `docs/android-release.md`.

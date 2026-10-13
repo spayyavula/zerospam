@@ -36,9 +36,10 @@ import { screenerRoutes } from './routes/screener.js';
 import { gmailOAuthRoutes } from './routes/oauth-gmail.js';
 import { outlookOAuthRoutes } from './routes/oauth-outlook.js';
 import { connectionsRoutes } from './routes/connections.js';
-import { renderPrivacyPolicyPage, renderTermsOfServicePage } from './legal-pages.js';
+import { renderPrivacyPolicyPage, renderTermsOfServicePage, renderDeleteAccountPage } from './legal-pages.js';
 import { requireAuth } from './requireAuth.js';
 import { billingRoutes } from './routes/billing.js';
+import { accountRoutes } from './routes/account.js';
 import { isAccountEntitled } from './billing.js';
 import { SESSION_COOKIE_NAME } from './sessions.js';
 import { getScreenerCounts } from './screener.js';
@@ -228,8 +229,8 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   await registerOpenApi(app);
 
   // Reachable while paywalled: sign-in/out and device pairing, billing, the user's own
-  // profile flags, and health.
-  const PAYWALL_OPEN_PREFIXES = ['/api/auth/', '/api/billing', '/api/users/me', '/api/health'];
+  // profile flags, account deletion, and health.
+  const PAYWALL_OPEN_PREFIXES = ['/api/auth/', '/api/billing', '/api/users/me', '/api/health', '/api/account/'];
 
   // Public routes (no auth) — health check + login/logout
   const PUBLIC_PREFIXES = [
@@ -305,6 +306,7 @@ export async function startApi(opts: { inject?: boolean } = {}) {
 
   await app.register(authRoutes);
   await app.register(billingRoutes);
+  await app.register(accountRoutes);
   await app.register(screenerRoutes);
   await app.register((await import('./routes/signup.js')).signupRoutes);
   await app.register(gmailOAuthRoutes);
@@ -314,6 +316,11 @@ export async function startApi(opts: { inject?: boolean } = {}) {
   app.get('/privacy-policy', async (_req, reply) => {
     reply.header('Content-Type', 'text/html; charset=utf-8');
     return reply.send(renderPrivacyPolicyPage());
+  });
+
+  app.get('/delete-account', async (_req, reply) => {
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return reply.send(renderDeleteAccountPage());
   });
 
   app.get('/terms-of-service', async (_req, reply) => {
@@ -1470,7 +1477,8 @@ export async function startApi(opts: { inject?: boolean } = {}) {
       const collidesWithReverse = db
         .prepare('SELECT id FROM reverse_aliases WHERE address = ?')
         .get(address);
-      if (!exists && !collidesWithMailbox && !collidesWithReverse) break;
+      const retired = db.prepare('SELECT 1 FROM retired_addresses WHERE address = ?').get(address);
+      if (!exists && !collidesWithMailbox && !collidesWithReverse && !retired) break;
       if (b.localPart) return reply.code(409).send({ error: 'address already in use' });
       attempt++;
     }

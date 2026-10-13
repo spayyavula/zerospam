@@ -39,7 +39,13 @@ export type StripeApi = {
   billingPortal: {
     sessions: { create(params: Stripe.BillingPortal.SessionCreateParams): Promise<{ url: string }> };
   };
+  subscriptions: { cancel(id: string): Promise<unknown> };
 };
+
+/** Stop billing immediately (account deletion). Throws if Stripe refuses. */
+export async function cancelSubscriptionNow(subscriptionId: string): Promise<void> {
+  await stripe().subscriptions.cancel(subscriptionId);
+}
 
 let client: StripeApi | null = null;
 

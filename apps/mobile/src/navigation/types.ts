@@ -23,6 +23,7 @@ export type AppStackParamList = {
   Alias: { aliasId: number };
   NewAlias: undefined;
   ForwardTargets: undefined;
+  DeleteAccount: undefined;
 };
 
 declare global {

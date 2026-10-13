@@ -19,6 +19,7 @@ import AliasesScreen from '../features/aliases/AliasesScreen';
 import AliasScreen from '../features/aliases/AliasScreen';
 import NewAliasScreen from '../features/aliases/NewAliasScreen';
 import ForwardTargetsScreen from '../features/aliases/ForwardTargetsScreen';
+import DeleteAccountScreen from '../features/more/DeleteAccountScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -89,6 +90,7 @@ export default function MainNavigator() {
       <Stack.Screen name="Alias" component={AliasScreen} />
       <Stack.Screen name="NewAlias" component={NewAliasScreen} options={{ title: 'New alias', presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="ForwardTargets" component={ForwardTargetsScreen} options={{ title: 'Forwarding addresses' }} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ title: '' }} />
       <Stack.Screen
         name="Compose"
         component={ComposeScreen}

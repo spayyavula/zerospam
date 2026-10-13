@@ -388,6 +388,13 @@ for (const [col, ddl] of [
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_accounts_stripe_customer ON accounts(stripe_customer_id)');
 
+// Addresses of deleted accounts are never handed out again, so nobody can sign up as a
+// deleted user and receive mail meant for them.
+db.exec(`CREATE TABLE IF NOT EXISTS retired_addresses (
+  address     TEXT PRIMARY KEY,
+  retired_at  INTEGER NOT NULL
+)`);
+
 // Push notifications for the mobile app (docs/android-app-spec.md §4.1).
 const deviceCols = colsOf('devices');
 if (!deviceCols.has('push_preview')) {
