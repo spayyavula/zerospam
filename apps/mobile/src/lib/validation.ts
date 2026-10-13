@@ -16,3 +16,11 @@ export function validateRecipients(to: string, cc: string, bcc: string): { ok: t
   if (bad) return { ok: false, error: `“${bad}” isn’t a valid email address.` };
   return { ok: true, ...lists };
 }
+
+/** Same rule as POST /api/aliases `localPart`. Empty means "pick a random one". */
+export function localPartProblem(s: string): string | null {
+  if (!s) return null;
+  if (!/^[a-z0-9][a-z0-9._-]{0,40}$/i.test(s)) return 'Start with a letter or number; then letters, numbers, . _ - (up to 41).';
+  if (s.toLowerCase().startsWith('rv.')) return 'Aliases can’t start with “rv.”';
+  return null;
+}

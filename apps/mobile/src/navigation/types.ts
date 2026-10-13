@@ -20,6 +20,9 @@ export type AppStackParamList = {
   Message: { messageId: string; mailboxId?: number };
   Compose: { mode?: ReplyMode; messageId?: string; to?: string } | undefined;
   Search: undefined;
+  Alias: { aliasId: number };
+  NewAlias: undefined;
+  ForwardTargets: undefined;
 };
 
 declare global {
