@@ -63,7 +63,7 @@ export default function SearchScreen({ navigation }: Props) {
         data={q.data}
         keyExtractor={(m) => m.id}
         keyboardShouldPersistTaps="handled"
-        ItemSeparatorComponent={() => <Divider inset={36} />}
+        ItemSeparatorComponent={() => <Divider inset={68} />}
         renderItem={({ item }: { item: MessageSummary }) => (
           <MessageRow
             message={{ ...item, subject: `${item.folder !== 'inbox' ? `[${FOLDER_NAME[item.folder] ?? item.folder}] ` : ''}${item.subject ?? ''}` }}

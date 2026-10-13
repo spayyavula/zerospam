@@ -4,6 +4,7 @@ import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture
 import { Ionicons } from '@expo/vector-icons';
 import type { MessageSummary } from '@zerospam/shared-api';
 import { Text } from './ui';
+import Avatar from './Avatar';
 import { useTheme } from '../theme/ThemeProvider';
 import { space } from '../theme/tokens';
 import { expiresIn, parseAddressList, senderLabel, shortDate } from '../lib/format';
@@ -69,9 +70,10 @@ export default function MessageRow({
         backgroundColor: pressed ? colors.paperDeep : colors.paper,
       })}
     >
-      <View style={{ width: 8, paddingTop: 7 }}>
-        {unread ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.signal }} /> : null}
-      </View>
+      <Avatar
+        label={showRecipient ? parseAddressList(message.to_addresses)[0] ?? '?' : senderLabel(message)}
+        address={showRecipient ? parseAddressList(message.to_addresses)[0] ?? '' : message.from_address}
+      />
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space.sm }}>
           <Text
@@ -81,14 +83,15 @@ export default function MessageRow({
           >
             {who}
           </Text>
-          <Text variant="caption" tone={unread ? 'ink' : 'quiet'}>{shortDate(message.received_at)}</Text>
+          {unread ? <View accessible={false} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.ink, alignSelf: 'center' }} /> : null}
+          <Text variant="caption" tone={unread ? 'ink' : 'quiet'} style={unread ? { fontWeight: '700' } : undefined}>{shortDate(message.received_at)}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text variant="small" numberOfLines={1} style={{ flex: 1, fontWeight: unread ? '600' : '400' }}>
             {message.subject?.trim() || '(no subject)'}
           </Text>
           {message.attachment_count > 0 ? <Ionicons name="attach" size={15} color={colors.quiet} /> : null}
-          {message.starred ? <Ionicons name="star" size={14} color={colors.signal} /> : null}
+          {message.starred ? <Ionicons name="star" size={14} color={colors.accent} /> : null}
         </View>
         {message.preview ? (
           <Text variant="small" tone="quiet" numberOfLines={2}>{message.preview}</Text>

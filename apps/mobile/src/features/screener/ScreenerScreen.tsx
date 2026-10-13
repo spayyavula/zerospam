@@ -3,12 +3,13 @@ import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ScreenerSender } from '@zerospam/shared-api';
+import Avatar from '../../components/Avatar';
 import { Button, EmptyState, ErrorState, Loading, Text } from '../../components/ui';
 import { useScreener, useScreenerAllow, useScreenerAllowDomain, useScreenerReject } from '../../hooks/useApi';
 import { useMailboxStore } from '../../stores/mailboxStore';
 import { useTheme } from '../../theme/ThemeProvider';
-import { fonts, radius, space } from '../../theme/tokens';
-import { initials, shortDate } from '../../lib/format';
+import { radius, space } from '../../theme/tokens';
+import { shortDate, wantInHeadline } from '../../lib/format';
 import { errorText } from '../../lib/apiClient';
 import { toast } from '../../lib/toast';
 
@@ -34,9 +35,7 @@ function SenderCard({
         accessibilityLabel={`${label}, ${sender.message_count} message${sender.message_count === 1 ? '' : 's'}. ${open ? 'Hide' : 'Show'} messages`}
         style={{ flexDirection: 'row', gap: space.md, padding: space.lg, alignItems: 'center' }}
       >
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.paperDeep, borderWidth: 1, borderColor: colors.rule, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontFamily: fonts.display, fontSize: 17 }}>{initials(label)}</Text>
-        </View>
+        <Avatar label={label} address={sender.address} size={44} />
         <View style={{ flex: 1 }}>
           <Text variant="heading" numberOfLines={1}>{label}</Text>
           {sender.name ? <Text variant="small" tone="quiet" numberOfLines={1}>{sender.address}</Text> : null}
@@ -145,9 +144,12 @@ export default function ScreenerScreen() {
       ListHeaderComponent={
         <View style={{ gap: space.md, marginBottom: visible.length ? 0 : space.lg }}>
           {visible.length ? (
-            <Text variant="small" tone="soft">
-              New senders wait here. Allow them once and their mail goes straight to your Inbox from now on.
-            </Text>
+            <View style={{ gap: space.sm, marginBottom: space.sm }}>
+              <Text variant="display">{wantInHeadline(visible.length)}</Text>
+              <Text variant="small" tone="soft">
+                Allow someone once and their mail goes straight to your Inbox from now on.
+              </Text>
+            </View>
           ) : null}
           {domainPrompt && mailboxId != null ? (
             <View style={{ backgroundColor: colors.paperDeep, borderRadius: radius.md, padding: space.md, gap: space.sm, borderWidth: 1, borderColor: colors.signal }}>

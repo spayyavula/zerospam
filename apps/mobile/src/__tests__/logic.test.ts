@@ -1,5 +1,5 @@
 import { buildMessageHtml, buildTextHtml, hasRemoteImages, rewriteImages } from '../lib/messageHtml';
-import { expiresIn, initials, parseAddressList, shortDate, splitAddresses } from '../lib/format';
+import { expiresIn, initials, parseAddressList, shortDate, splitAddresses, tintIndex, wantInHeadline } from '../lib/format';
 import { localPartProblem, usernameProblem, validateRecipients } from '../lib/validation';
 import { aliasStatus } from '../features/aliases/aliasStatus';
 import { light } from '../theme/tokens';
@@ -107,5 +107,17 @@ describe('aliases', () => {
     expect(localPartProblem('shop.2026')).toBeNull();
     expect(localPartProblem('-bad')).not.toBeNull();
     expect(localPartProblem('rv.abc')).not.toBeNull();
+  });
+});
+
+describe('design helpers', () => {
+  it('screener headline reads naturally', () => {
+    expect(wantInHeadline(1)).toBe('One person wants in.');
+    expect(wantInHeadline(3)).toBe('Three people want in.');
+    expect(wantInHeadline(14)).toBe('14 people want in.');
+  });
+  it('avatar tint is stable per address', () => {
+    expect(tintIndex('a@x.com')).toBe(tintIndex('a@x.com'));
+    expect(tintIndex('a@x.com')).toBeGreaterThanOrEqual(0);
   });
 });

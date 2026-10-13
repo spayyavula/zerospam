@@ -79,3 +79,17 @@ export function initials(label: string): string {
   if (words.length === 1) return words[0].charAt(0).toUpperCase();
   return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
 }
+
+const NUMBER_WORDS = ['No one', 'One person', 'Two people', 'Three people', 'Four people', 'Five people', 'Six people', 'Seven people', 'Eight people', 'Nine people'];
+
+/** Screener headline: "Three people want in." */
+export function wantInHeadline(n: number): string {
+  return `${NUMBER_WORDS[n] ?? `${n} people`} ${n === 1 ? 'wants' : 'want'} in.`;
+}
+
+/** Stable bucket for a string, used to pick a sender's avatar tint. */
+export function tintIndex(key: string, buckets = 6): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
+  return Math.abs(h) % buckets;
+}

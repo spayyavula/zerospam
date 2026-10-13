@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { Attachment, MessageDetail } from '@zerospam/shared-api';
 import MessageBody from './MessageBody';
+import Avatar from '../../components/Avatar';
 import { Button, Chip, Divider, ErrorState, IconButton, Loading, Text } from '../../components/ui';
 import {
   useAttachments,
@@ -17,8 +18,8 @@ import {
   useTrustSender,
 } from '../../hooks/useApi';
 import { useTheme } from '../../theme/ThemeProvider';
-import { fonts, radius, space } from '../../theme/tokens';
-import { bytes, expiresIn, initials, longDate, parseAddressList, senderLabel } from '../../lib/format';
+import { radius, space } from '../../theme/tokens';
+import { bytes, expiresIn, longDate, parseAddressList, senderLabel } from '../../lib/format';
 import { hasRemoteImages } from '../../lib/messageHtml';
 import { errorText } from '../../lib/apiClient';
 import { openAttachment } from '../../lib/attachments';
@@ -177,9 +178,7 @@ export default function MessageScreen({ route, navigation }: Props) {
         <Text variant="title" selectable>{m.subject?.trim() || '(no subject)'}</Text>
 
         <Pressable onPress={() => setDetails((v) => !v)} accessibilityRole="button" accessibilityLabel="Show details" style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.paperDeep, borderWidth: 1, borderColor: colors.rule, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontFamily: fonts.display, fontSize: 16 }}>{initials(label)}</Text>
-          </View>
+          <Avatar label={label} address={m.from_address} />
           <View style={{ flex: 1 }}>
             <Text variant="body" numberOfLines={1} style={{ fontWeight: '600' }}>{label}</Text>
             <Text variant="caption" tone="quiet" numberOfLines={1}>
